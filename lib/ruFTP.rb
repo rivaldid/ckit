@@ -22,20 +22,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-
 require "uri"
 require "fileutils"
-require 'optparse'
-require 'ostruct'
-require 'pp'
-require '~/.ckit/lib/libruftp.rb'
+require "optparse"
+require "set"
+require "pp"
+require "libruftp"
 
 class Optparse
-
-  
-    
-  
-    
 
   #
   # Return a structure describing the options.
@@ -111,7 +105,7 @@ if __FILE__==$0
   options=Optparse.parse(ARGV)
   ftp=Myftp.new()
   begin
-    ftp.exec(options) {|res|
+    ftp.exec(options) { |res|
       puts res
     }
   rescue Exception => detail

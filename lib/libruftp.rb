@@ -1,29 +1,8 @@
 #!/usr/bin/env ruby
-#
-#
-#  libruftp 0.1  
-#
-#  libruftp is written by Luca 'Nss' ded to CKit.
-#
-#  Copyright (C) 2010   Dario 'Dax' Vilardi
-#                       dax [at] deelab [dot] org
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 
 require "net/ftp"
+require "ostruct"
 
 =begin
 @options={:host=>nil,
@@ -36,10 +15,11 @@ require "net/ftp"
   }
 =end
 class Myftp < Net::FTP
-
-  FILECOMMAND=[:put,:get,:delete,:rmdir]
+  PROGRCMD=[:put,:get]
+  FILECOMMAND=[:delete,:rmdir].concat PROGRCMD
   COMMAND=[:ls]
-
+  DEFAULT_BLOCKSIZE=1024
+  
   def self.available_options
     options={:host=>nil,
       :port=>21,
@@ -55,6 +35,49 @@ class Myftp < Net::FTP
     return OpenStruct.new(options)
   end
 
+  def print_percent(file,percent) 
+    print "\r=> #{file}: #{percent}% "
+    STDOUT.flush
+  end
+  
+  def put(localfile, remotefile = File.basename(localfile), blocksize = DEFAULT_BLOCKSIZE, &block)
+        unless @binary
+          self.puttextfile(localfile, remotefile, &block)
+        else
+          filesize=File.size localfile
+          transferred = 0
+          old_perc=-1
+          putbinaryfile(localfile, remotefile, blocksize) { |data|
+            transferred+=data.size
+            percent_finished=(((transferred).to_f/filesize.to_f)*100).round
+            if old_perc!=percent_finished
+              print_percent(File.basename(localfile),percent_finished)
+              old_perc=percent_finished
+            end
+          }
+        end
+  end
+  
+  def get(remotefile, localfile = File.basename(remotefile), blocksize = DEFAULT_BLOCKSIZE, &block)
+       unless @binary
+         self.gettextfile(remotefile, localfile, &block)
+       else
+         filesize=File.size localfile
+         transferred = 0
+         old_perc=-1
+         puts "Starting get:"
+         self.getbinaryfile(localfile, remotefile, blocksize) { |e|
+           transferred+=sent.size
+           percent_finished=(((transferred).to_f/filesize.to_f)*100).round
+           if old_perc!=percent_finished
+             print_percent(File.basename(localfile),percent_finished)
+             old_perc=percent_finished
+           end
+         }  
+         puts
+       end
+  end
+  
   def self.supported_command
     return COMMAND.concat(FILECOMMAND)
   end
@@ -87,12 +110,14 @@ class Myftp < Net::FTP
     self.chdir(options.directory)
 
     if FILECOMMAND.include?(options.command)
+      puts "Starting #{options.command}: "
       options.filelist.each { |f|
-        self.method(options.command).call f
-        yield "#{options.command} #{f}"
+          self.method(options.command).call f
+          yield "==> #{f} finished"
       }
+      puts "#{options.command} finished"
     elsif COMMAND.include?(options.command)
-        yield self.method(options.command).call
+          yield self.method(options.command).call
     end
 
     self.close
