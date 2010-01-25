@@ -23,29 +23,29 @@
 #
 
 #################### SETTINGS  #############################
-#	Follow this 3 steps!
+#   Follow this 3 steps!
 #-----------------------------------------------------------
-#	1) Install dependencies
+#   1) Install dependencies
 #-----------------------------------------------------------
 datadir="$HOME/.ckit"
 libdir="$datadir/lib"
 #-----------------------------------------------------------
-#	2) Install config
+#   2) Install config
 #-----------------------------------------------------------
-#	rm -r ~/.ckit/lib
-#	mkdir -p ~/.ckit/lib
-#	cp ckit/lib/libruftp.rb ckit/lib/ruFTP.rb ~/.ckit/lib/
+#   rm -r ~/.ckit/lib
+#   mkdir -p ~/.ckit/lib
+#   cp ckit/lib/libruftp.rb ckit/lib/ruFTP.rb ~/.ckit/lib/
 #-----------------------------------------------------------
-#	cp ckit/ckit_myrepo.conf  ~/.ckit/ckit_your-repo.conf
-#	edit and fill ~/.ckit/ckit_your-repo.conf
+#   cp ckit/ckit_myrepo.conf  ~/.ckit/ckit_your-repo.conf
+#   edit and fill ~/.ckit/ckit_your-repo.conf
 #-----------------------------------------------------------
-#	edit this variable to use it
+#   edit this variable to use it
 source $datadir/ckit_myrepo.conf
 #-----------------------------------------------------------
-#	do it for every repository you handle
-#	save this script in the same way
+#   do it for every repository you handle
+#   save this script in the same way
 #-----------------------------------------------------------
-#	3) Happy Maintaining!
+#   3) Happy Maintaining!
 #################### /SETTINGS #############################
 
 
@@ -94,8 +94,8 @@ ftp_put(){
 }
 
 ftp_delete(){
-	file=$1
-	ftp_run delete $file
+    file=$1
+    ftp_run delete $file
 }
 
 ftp_put_repo(){
@@ -129,27 +129,27 @@ ftp_pkg_delete(){
 }
 
 ftp_checkfile(){
-	file=$1
-	ftp_run ls '' | grep $file &>/dev/null \
-		&& return 0 \
-		|| return 1
+    file=$1
+    ftp_run ls '' | grep $file &>/dev/null \
+        && return 0 \
+        || return 1
 }
 
 lock(){
-	ftp_checkfile lock.lk \
-		&& die "==> Repository in maintenance yet. Please wait!"
-	touch $repodir/lock.lk
-	whoami > lock.lk
-	echo "==> Locking ftp to prevent jumble between maintenances"
+    ftp_checkfile lock.lk \
+        && die "==> Repository in maintenance yet. Please wait!"
+    touch $repodir/lock.lk
+    whoami > lock.lk
+    echo "==> Locking ftp to prevent jumble between maintenances"
     ftp_put $repodir/lock.lk
 }
 
 unlock(){
-	echo "==> Unlocking ftp"
-	ftp_delete lock.lk
-	ftp_checkfile lock.lk \
-		&& echo "  -> Failed at unlock, remove lock.lk manually!"
-	rm $repodir/lock.lk
+    echo "==> Unlocking ftp"
+    ftp_delete lock.lk
+    ftp_checkfile lock.lk \
+        && echo "  -> Failed at unlock, remove lock.lk manually!"
+    rm $repodir/lock.lk
 }
 
 post_build(){
