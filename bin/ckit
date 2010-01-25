@@ -29,7 +29,7 @@
 #-----------------------------------------------------------
 datadir="$HOME/.ckit"
 libdir="$datadir/lib"
-#libdir="/usr/lib/ruby/site_ruby/1.9.1/
+#libdir="/usr/lib/ruby/site_ruby/1.9.1"
 
 #-----------------------------------------------------------
 #   2) Install config
