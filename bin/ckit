@@ -43,6 +43,7 @@ libdir="$datadir/lib"
 #-----------------------------------------------------------
 #   edit this variable to use it
 source $datadir/ckit_myrepo.conf
+#source /etc/ckit.conf
 #-----------------------------------------------------------
 #   do it for every repository you handle
 #   save this script in the same way
