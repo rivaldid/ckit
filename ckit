@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.3
+#  CKIT - Construction Kit - 0.4
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -22,26 +22,31 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-#################### SETTINGS ####################
-
-#°°°°°°°°° FIRST OF ALL °°°°°°°°°°°°°°°°°°°°°°°°°°
+#################### SETTINGS  #############################
+#	Follow this 3 steps!
+#-----------------------------------------------------------
+#	1) Install dependencies
+#-----------------------------------------------------------
 datadir="$HOME/.ckit"
-#°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 libdir="$datadir/lib"
-#   e.g.)
-#   mkdir ~/.ckit
-#   cp -r where_are_you/ckit/lib ~/.ckit/
-#°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-#°°°°°°°° 1) EDIT setting_myrepo.sh °°°°°°°°°°°°°°
-#°°°°°°°° 2) SAVE AS settings_YOUR-REPO-NAME.sh °°
-#°°°°°°°° 3) EDIT THIS VARIABLE TO USE IT °°°°°°°°
-#°°°°°°°° *) DO IT FOR EVERY REPO YOU HANDLE °°°°°
-#°°°°°°° **) SAVE THIS SCRIPT IN THE SAME WAY °°°°
-#°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-source $datadir/settings_myrepo.sh
-#°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-
-#################### /SETTINGS ####################
+#-----------------------------------------------------------
+#	2) Install config
+#-----------------------------------------------------------
+#	rm -r ~/.ckit/lib
+#	mkdir -p ~/.ckit/lib
+#	cp ckit/lib/libruftp.rb ckit/lib/ruFTP.rb ~/.ckit/lib/
+#-----------------------------------------------------------
+#	cp ckit/ckit_myrepo.conf  ~/.ckit/ckit_your-repo.conf
+#	edit and fill ~/.ckit/ckit_your-repo.conf
+#-----------------------------------------------------------
+#	edit this variable to use it
+source $datadir/ckit_myrepo.conf
+#-----------------------------------------------------------
+#	do it for every repository you handle
+#	save this script in the same way
+#-----------------------------------------------------------
+#	3) Happy Maintaining!
+#################### /SETTINGS #############################
 
 
 
@@ -72,17 +77,15 @@ ftp_run(){
     # available commands: ls,put,get,delete,rmdir
     command=$1
     file=$2
-    $libdir/./ruFTP.rb -H $hostname -u $user -p $pass -d /arch/$arch -c $command $file &>/dev/null
+    ruby -I $libdir $libdir/ruFTP.rb -H $hostname -u $user -p $pass -d /arch/$arch -c $command $file
 }
 
 ftp_get_repo(){
     cd $repodir
     [[ -f $repo ]] && rm $repo
     
-    printf "==> Getting $repo... "
-    ftp_run get $repo \
-        && echo "done" \
-        || die "failed"
+    echo "==> Getting db "
+    ftp_checkfile $repo && ftp_run get $repo
 }
 
 ftp_put(){
@@ -90,13 +93,16 @@ ftp_put(){
     ftp_run put $file
 }
 
+ftp_delete(){
+	file=$1
+	ftp_run delete $file
+}
+
 ftp_put_repo(){
     cp "$repo" "$repo"_prev
     
-    printf "==> Uploading db... "
-    ftp_put $repo \
-        && echo "done" \
-        || echo "failed"
+    echo "==> Putting db "
+    ftp_put $repo
     
     ftp_get_repo
     i=$(stat -c%s "$repo")
@@ -107,7 +113,7 @@ ftp_put_repo(){
         || echo "  -> Take care: $i ~ $j! restoredb maybe needed"
 }
 
-ftp_delete(){
+ftp_pkg_delete(){
     pkg=$1
     found=0
     while read -r line; do
@@ -116,15 +122,35 @@ ftp_delete(){
         repopkg=${i%-*-*}
         if [[ $repopkg == $pkg ]]; then
             found=1
-            printf "  -> $i-$arch.pkg.tar.gz... "
-            ftp_run delete $i-$arch.pkg.tar.gz \
-                && echo "done" \
-                || echo "failed"
+            ftp_run delete $i-$arch.pkg.tar.gz
         fi
     done < <(tar ztf $repo)
     (( found == 0 )) && echo "  -> $pkg not found"
 }
 
+ftp_checkfile(){
+	file=$1
+	ftp_run ls '' | grep $file &>/dev/null \
+		&& return 0 \
+		|| return 1
+}
+
+lock(){
+	ftp_checkfile lock.lk \
+		&& die "==> Repository in maintenance yet. Please wait!"
+	touch $repodir/lock.lk
+	whoami > lock.lk
+	echo "==> Locking ftp to prevent jumble between maintenances"
+    ftp_put $repodir/lock.lk
+}
+
+unlock(){
+	echo "==> Unlocking ftp"
+	ftp_delete lock.lk
+	ftp_checkfile lock.lk \
+		&& echo "  -> Failed at unlock, remove lock.lk manually!"
+	rm $repodir/lock.lk
+}
 
 post_build(){
     pkg=($1*.pkg.tar.gz)
@@ -188,23 +214,6 @@ deletesrc_run(){
         && rmsrc $pkg
 }
 
-lock(){
-	ftp_run get lock.file \
-		&& die "==> Repository in maintenance yet. Please wait!"
-	touch $repodir/lock.file
-	printf "==> Locking ftp to prevent jumble between maintenances... "
-    ftp_run put $repodir/lock.file \
-		&& echo "done" \
-		|| die "failed"
-}
-
-unlock(){
-	printf "==> Unlocking ftp... "
-	ftp_run delete lock.file \
-		&& echo "done" \
-		|| echo "failed (remove it manually!)"
-	rm $repodir/lock
-}
 
 #################### /PRIVATE INTERFACES ####################
 
@@ -519,7 +528,7 @@ add(){
     echo "==> Deleting previous packages"
     copy_log_to_pkgs "$buildlog"
     for pkg in "${pkgs[@]}"; do
-        ftp_delete $pkg
+        ftp_pkg_delete $pkg
     done
     rm $buildlog $checklog
     
@@ -538,13 +547,7 @@ add(){
     # put new packages
     echo "==> Uploading packages"
     for file in *.pkg.tar.gz; do 
-        printf "  -> $file... "
-        if ftp_put $file; then
-            echo "done"
-            mv $file $cachedir
-        else
-            echo "failed"
-        fi
+        ftp_put $file && mv $file $cachedir
     done
     
     # unlock ftp
@@ -568,7 +571,7 @@ remove(){
     ftp_get_repo
     echo "==> Removing from ftp"
     for pkg in "${pkgs[@]}"; do
-        ftp_delete $pkg
+        ftp_pkg_delete $pkg
     done
     
     echo "==> Removing from db"
@@ -634,7 +637,7 @@ for log in "${logs[@]}"; do
     [[ ! -f $repodir/$log ]] && touch $repodir/$log
 done
     
-    
+
 
 test -z "$1" && die "==> RTFM, see ya!"
 

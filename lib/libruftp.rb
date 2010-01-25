@@ -1,4 +1,14 @@
 #!/usr/bin/env ruby
+# 
+#  libruftp.rb
+#  ruFtp - ruby ftp client - 0.2
+#   
+#  Created by Nss 
+#             luca [at] tulug [dot] it.
+# 
+#  This library is distributed under the terms of the Ruby license. 
+#  You can freely distribute/modify this library. 
+# 
 
 
 require "net/ftp"
@@ -14,12 +24,17 @@ require "ostruct"
     :filelist=>[]
   }
 =end
+
 class Myftp < Net::FTP
   PROGRCMD=[:put,:get]
-  FILECOMMAND=[:delete,:rmdir].concat PROGRCMD
+  FILECOMMAND=[:delete,:rmdir,:mkdir].concat PROGRCMD
   COMMAND=[:ls]
   DEFAULT_BLOCKSIZE=1024
   
+  def self.supported_command
+    return COMMAND.concat(FILECOMMAND)
+  end
+         
   def self.available_options
     options={:host=>nil,
       :port=>21,
@@ -35,23 +50,28 @@ class Myftp < Net::FTP
     return OpenStruct.new(options)
   end
 
-  def print_percent(file,percent) 
-    print "\r=> #{file}: #{percent}% "
+  def print_string(string)
+    print string
     STDOUT.flush
   end
   
-  def put(localfile, remotefile = File.basename(localfile), blocksize = DEFAULT_BLOCKSIZE, &block)
+  def print_percent(file,percent) 
+    print "\r  -> #{file}... #{percent}%"
+    STDOUT.flush
+  end
+  
+  def put(file, remotefile = File.basename(file), blocksize = DEFAULT_BLOCKSIZE, &block)
         unless @binary
-          self.puttextfile(localfile, remotefile, &block)
+          self.puttextfile(file, remotefile, &block)
         else
-          filesize=File.size localfile
+          filesize=File.size file
           transferred = 0
           old_perc=-1
-          putbinaryfile(localfile, remotefile, blocksize) { |data|
+          putbinaryfile(file, remotefile, blocksize) { |data|
             transferred+=data.size
             percent_finished=(((transferred).to_f/filesize.to_f)*100).round
             if old_perc!=percent_finished
-              print_percent(File.basename(localfile),percent_finished)
+              print_percent(File.basename(file),percent_finished)
               old_perc=percent_finished
             end
           }
@@ -60,27 +80,23 @@ class Myftp < Net::FTP
   
   def get(remotefile, localfile = File.basename(remotefile), blocksize = DEFAULT_BLOCKSIZE, &block)
        unless @binary
-         self.gettextfile(remotefile, localfile, &block)
+         gettextfile(remotefile, localfile, &block)
        else
-         filesize=File.size localfile
+         filesize=size remotefile
          transferred = 0
          old_perc=-1
-         puts "Starting get:"
-         self.getbinaryfile(localfile, remotefile, blocksize) { |e|
-           transferred+=sent.size
+         getbinaryfile(remotefile, localfile, blocksize) { |data|
+           transferred+=data.size
            percent_finished=(((transferred).to_f/filesize.to_f)*100).round
            if old_perc!=percent_finished
-             print_percent(File.basename(localfile),percent_finished)
+             print_percent(File.basename(File.basename(remotefile)),percent_finished)
              old_perc=percent_finished
            end
          }  
-         puts
        end
   end
   
-  def self.supported_command
-    return COMMAND.concat(FILECOMMAND)
-  end
+  
 
   def validate_options(options)
     if options.host.nil?
@@ -96,26 +112,27 @@ class Myftp < Net::FTP
   end
 
   def exec(options)
-    self.validate_options(options)
-    
-    self.connect(options.host, options.port)
+    validate_options(options)
+    connect(options.host, options.port)
     
     if options.username.nil?
-      puts "user e n  il"
-      self.login
+      login()
     else
-      self.login(options.username,options.password)
+      login(options.username,options.password)
     end
     
-    self.chdir(options.directory)
+    chdir(options.directory)
 
     if FILECOMMAND.include?(options.command)
-      puts "Starting #{options.command}: "
-      options.filelist.each { |f|
-          self.method(options.command).call f
-          yield "==> #{f} finished"
+     
+      options.filelist.each { |file|
+          method(options.command).call file
+          if PROGRCMD.include?(options.command)
+            yield " done"
+          else
+            yield "  -> #{file}... done"
+          end
       }
-      puts "#{options.command} finished"
     elsif COMMAND.include?(options.command)
           yield self.method(options.command).call
     end
