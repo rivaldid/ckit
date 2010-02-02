@@ -1,12 +1,20 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.43
-#    An unofficial Arch Linux repository manager 
+#  CKIT - Construction Kit - 0.44
+#    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
 #  Copyright (C) 2010   Dario 'Dax' Vilardi
 #                       dax [at] deelab [dot] org
+#
+#
+#  Authors:
+#       Dario 'Dax' Vilardi     : bash developer
+#       Luca 'Nss'              : ruby developer
+#       Giovanni Scafora        : packager
+#
+#
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,30 +31,12 @@
 #
 
 
-#################### SETTINGS  #############################
-#   Follow this steps!
-#-----------------------------------------------------------
-#   1) Copy dependencies
-#-----------------------------------------------------------
-datadir="$HOME/.ckit"
-#libdir="/usr/lib/ruby/site_ruby/1.9.1"
-#-----------------------------------------------------------
-#   $ rm -r ~/.ckit/lib
-#   $ cp -r ckit/lib/ ~/.ckit
-#-----------------------------------------------------------
-#   2) Copy config
-#-----------------------------------------------------------
-#   $ mkdir ~/.ckit/conf
-#   $ cp ckit/conf/ckit.conf  ~/.ckit/conf
-#-----------------------------------------------------------
-#   3) FILL THIS ~/.ckit/conf/ckit.conf
-#-----------------------------------------------------------
-conf="$datadir/conf/ckit.conf"
-#conf="/etc/ckit.conf"
-#-----------------------------------------------------------
-#   *) Happy Maintaining!
-#################### /SETTINGS #############################
+#################### ENVIRONMENT  ##########################
 
+libdir="/usr/lib/ruby/site_ruby/1.9.1"
+conf="/etc/ckit/ckit.conf"
+
+#################### /ENVIRONMENT  #########################
 
 
 
@@ -80,7 +70,7 @@ ftp_run(){
     # available commands: ls,put,get,delete,rmdir
     command=$1
     file=$2
-    ruby -I $datadir/lib $datadir/lib/ruFTP.rb -H $hostname -u $user -p $pass -d /arch/$arch -c $command $file
+    ruby -I $libdir $libdir/ruFTP.rb -H $hostname -u $user -p $pass -d /arch/$arch -c $command $file
 }
 
 ftp_get_repo(){
@@ -213,12 +203,12 @@ deletesrc_run(){
 }
 
 
-#################### /PRIVATE INTERFACES ####################
+#################### /PRIVATE INTERFACES ###################
 
 
 
 
-#################### PUBLIC INTERFACES ####################
+#################### PUBLIC INTERFACES #####################
 
 
 
@@ -651,7 +641,7 @@ help(){
 
 
 
-#################### MAIN ####################
+#################### MAIN ##################################
 
 # test config file
 [[ ! -s $conf ]] \
@@ -755,5 +745,4 @@ fi
 
 
 
-
-#################### /MAIN ####################
+#################### /MAIN #################################
