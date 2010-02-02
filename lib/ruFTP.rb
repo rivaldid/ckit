@@ -26,7 +26,7 @@ class Optparse
     
     options=Myftp.available_options
 
-    parser = OptionParser.new { |opts|
+    parser = OptionParser.new do |opts|
       opts.banner = "Usage: #{$0} -H HOST -c CMD [options] [files]"
 
       opts.on(:REQUIRED,'-H','--host HOST:[PORT]','Set the host') do |host|
@@ -53,6 +53,10 @@ class Optparse
       opts.on('-d','--directory DIR','Set the remote directory') do |directory|
         options.directory=directory
       end
+      
+      opts.on('-D','--debug',"Enable debug") do
+        options.debug_mode=true
+      end
 
       opts.on('-R','--resume',"Enable resume") do
         options.resume=true
@@ -72,7 +76,7 @@ class Optparse
         exit
       end
 
-    }
+    end
 
     begin
       parser.parse!(args)
@@ -93,11 +97,12 @@ if __FILE__==$0
   options=Optparse.parse(ARGV)
   ftp=Myftp.new()
   begin
-    ftp.exec(options) { |res|
+    ftp.exec(options) do |res|
       puts res
-    }
+    end
   rescue Exception => detail
-      $stderr.puts "Error: #{detail}"
-      exit
+    $stderr.puts "Error: #{detail}"
+  ensure
+    ftp.close
   end  
 end

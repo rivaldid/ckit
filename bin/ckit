@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.41
+#  CKIT - Construction Kit - 0.42
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -22,33 +22,29 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+
 #################### SETTINGS  #############################
-#   Follow this 3 steps!
+#   Follow this steps!
 #-----------------------------------------------------------
-#   1) Install dependencies
+#   1) Copy dependencies
 #-----------------------------------------------------------
 datadir="$HOME/.ckit"
-libdir="$datadir/lib"
 #libdir="/usr/lib/ruby/site_ruby/1.9.1"
-
 #-----------------------------------------------------------
-#   2) Install config
+#   $ rm -r ~/.ckit/lib
+#   $ cp -r ckit/lib/ ~/.ckit
 #-----------------------------------------------------------
-#   rm -r ~/.ckit/lib
-#   mkdir -p ~/.ckit/lib
-#   cp ckit/lib/libruftp.rb ckit/lib/ruFTP.rb ~/.ckit/lib/
+#   2) Copy config
 #-----------------------------------------------------------
-#   cp ckit/ckit_myrepo.conf  ~/.ckit/ckit_your-repo.conf
-#   edit and fill ~/.ckit/ckit_your-repo.conf
+#   $ mkdir ~/.ckit/conf
+#   $ cp ckit/conf/ckit.conf  ~/.ckit/conf
 #-----------------------------------------------------------
-#   edit this variable to use it
-source $datadir/ckit.conf
-#source /etc/ckit.conf
+#   3) FILL THIS ~/.ckit/conf/ckit.conf
 #-----------------------------------------------------------
-#   do it for every repository you handle
-#   save this script in the same way
+conf="$datadir/conf/ckit.conf"
+#conf="/etc/ckit.conf"
 #-----------------------------------------------------------
-#   3) Happy Maintaining!
+#   *) Happy Maintaining!
 #################### /SETTINGS #############################
 
 
@@ -57,8 +53,12 @@ source $datadir/ckit.conf
 
 #################### PRIVATE INTERFACES ####################
 
+die(){ 
+    echo "$@"
+    exit 1
+}
 
-wget_tarball(){
+get_aur_tarball(){
     pkg=$1
     cd $builddir
     url="http://aur.archlinux.org/packages/$pkg/$pkg/PKGBUILD"
@@ -80,7 +80,7 @@ ftp_run(){
     # available commands: ls,put,get,delete,rmdir
     command=$1
     file=$2
-    ruby -I $libdir $libdir/ruFTP.rb -H $hostname -u $user -p $pass -d /arch/$arch -c $command $file
+    ruby -I $datadir/lib $datadir/lib/ruFTP.rb -H $hostname -u $user -p $pass -d /arch/$arch -c $command $file
 }
 
 ftp_get_repo(){
@@ -187,11 +187,6 @@ rmsrc(){
     for i in "${target[@]}"; do
         rm $builddir/$1/*$i &>/dev/null && echo "  -> $i removed"
     done
-}
-
-die(){ 
-    echo "$@"
-    exit 1
 }
 
 copy_log_to_pkgs(){
@@ -356,24 +351,36 @@ check(){
         fi
         
         # devel check
-        if is_devel $pkg && [[ -d $builddir/$pkg ]]; then 
+        if [[ $develcheck == 0 ]] && is_devel $pkg && [[ -d $builddir/$pkg ]]; then 
             cd "$builddir/$pkg" || echo "==> $pkg not available."
             # awk -v foo=something  assigns an awk variable
             # $0 being the whole line, $1 being the first field
             develver=$(makepkg -o 2>&1 | awk -v "pkg=$pkg" '$0 ~ pkg {print $6}')
             cd ~-
-            result=$(vercmp "$repover" "$develver")
+            version=$develver
         else
-            develver="Null"
-            result=$(vercmp "$repover" "$aurver")
+            version=$aurver
         fi
-                
-        if [[ "$result" < 0 ]]; then
-            echo "  -> $pkg REPO:$repover LOCAL:$localver AUR:$aurver DEVEL:$develver"
-            echo $pkg >> /tmp/CKIT
-            cat /tmp/CKIT $repodir/$checklog > /tmp/$checklog
-            rm /tmp/CKIT
-            mv /tmp/$checklog $repodir/$checklog
+        
+        # check
+        result=$(vercmp "$repover" "$version")
+            
+        if (( "$result" < 0 )); then
+            if is_devel $pkg; then
+                if [[ $develcheck == 0 ]]; then
+                    echo "  -> $pkg REPO:$repover LOCAL:$localver CURRENTLY:$version"
+                    echo $pkg >> /tmp/CKIT
+                    cat /tmp/CKIT $repodir/$checklog > /tmp/$checklog
+                    rm /tmp/CKIT
+                    mv /tmp/$checklog $repodir/$checklog
+                fi
+            else
+                echo "  -> $pkg REPO:$repover LOCAL:$localver CURRENTLY:$version"
+                echo $pkg >> /tmp/CKIT
+                cat /tmp/CKIT $repodir/$checklog > /tmp/$checklog
+                rm /tmp/CKIT
+                mv /tmp/$checklog $repodir/$checklog
+            fi
         fi
  
     done < <(tar ztf $repo)
@@ -402,13 +409,13 @@ updatepkgbuild(){
             i="${line%/}"
             pkg=${i%-*-*}
             read -p "  -> $pkg: update? (y/n) " answer
-            [[ "$answer" == "y" ]] && wget_tarball "$pkg"
+            [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         done
         
     else
     
         for pkg in "${pkgs[@]}"; do
-            wget_tarball "$pkg"
+            get_aur_tarball "$pkg"
         done
         
     fi
@@ -440,15 +447,19 @@ build(){
         echo "==> $pkg"
         cd $builddir
         
+        
         if [[ $noconfirm == 0 ]]; then
             # aur
-            [[ $aur == "0" ]] && wget_tarball $pkg
+            [[ $aur == "0" ]] && get_aur_tarball $pkg
             # root
             [[ $root == "0" ]] && sudo="sudo" && asroot="--asroot"
             # install
             [[ $install == "0" ]] && i="-i"
             # skipmd5sums
             [[ $skipmd5sums == "0" ]] && skipinteg="--skipinteg"
+            # filter
+            [[ ! -s $pkg/PKGBUILD ]] \
+                && die "  -> PKGBUILD not found."
             # makepkg
             cd $pkg && $sudo makepkg $i -s $asroot $skipinteg
             post_build $pkg
@@ -459,10 +470,10 @@ build(){
             
                 # aur
                 if [[ $aur == "0" ]]; then
-                    wget_tarball $pkg
+                    get_aur_tarball $pkg
                 else
                     read -p "  -> Do you want get tarball from AUR? (y/n) " answer
-                    [[ "$answer" == "y" ]] && wget_tarball $pkg
+                    [[ "$answer" == "y" ]] && get_aur_tarball $pkg
                 fi
                 
                 # root
@@ -489,6 +500,10 @@ build(){
                     read -p "  -> Do you want skip md5sums check? (y/n) " answer
                     [[ "$answer" == "y" ]] && skipinteg="--skipinteg"
                 fi
+                
+                # filter
+                [[ ! -s $pkg/PKGBUILD ]] \
+                    && die "  -> PKGBUILD not found."
                 
                 # makepkg
                 cd $pkg && $sudo makepkg $i -s $asroot $skipinteg
@@ -618,7 +633,8 @@ help(){
     echo "  -> -Bn: don't ask confirm"
     echo "  -> -BL: build from checklog"
     echo "  -> -L: edit log files"
-    echo "  -> -C: check for newer version of packages"
+    echo "  -> -C[d]: check for outdated stable packages"
+    echo "  -> -Cd: check for outdated stable and devel packages"
     echo "  -> -R packages: remove packages from repository"
     echo "==> Postprocessing:"
     echo "  -> -A: add built packages"
@@ -637,6 +653,12 @@ help(){
 
 #################### MAIN ####################
 
+# test config file
+[[ ! -s $conf ]] \
+        && die "==> Configuration file not found!" \
+        || source $conf
+
+
 cd $repodir
 
 
@@ -644,7 +666,6 @@ logs=( "$buildlog" "$checklog" "$updatelog" "$deletelog" )
 for log in "${logs[@]}"; do
     [[ ! -f $repodir/$log ]] && touch $repodir/$log
 done
-    
 
 
 test -z "$1" && die "==> RTFM, see ya!"
@@ -671,10 +692,11 @@ root=1
 install=1
 skipmd5sums=1
 noconfirm=1
+develcheck=1
 
     
 x=1         # Avoids an error if we get no options at all.
-while getopts "ABarisnCRUHLTOEDh" opt; do
+while getopts "ABarisnCdRUHLTOEDh" opt; do
     case "$opt" in
         A) ADD=0;;
         B) BUILD=0;;
@@ -684,6 +706,7 @@ while getopts "ABarisnCRUHLTOEDh" opt; do
         s) skipmd5sums=0;;
         n) noconfirm=0;;
         C) CHECK=0;;
+        d) develcheck=0;;
         R) REMOVE=0;;
         U) UPDATEPKGBUILD=0;;
         H) CLEARCACHE=0;;
