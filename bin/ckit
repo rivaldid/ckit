@@ -651,7 +651,10 @@ help(){
 
 cd $repodir
 
+# test workspaces
+mkdir -p "$builddir" "$repodir" "$cachedir"
 
+# test logs
 logs=( "$buildlog" "$checklog" "$updatelog" "$deletelog" )
 for log in "${logs[@]}"; do
     [[ ! -f $repodir/$log ]] && touch $repodir/$log
