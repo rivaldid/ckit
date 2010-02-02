@@ -10,7 +10,7 @@ url="http://www.deelab.org/ckit"
 license=('GPL')
 depends=('ruby')
 makedepends=('git')
-backup=(etc/conf/ckit.conf)
+backup=(etc/ckit/ckit.conf)
 provides=('ckit')
 conflicts=('ckit')
 
@@ -35,7 +35,7 @@ build() {
   git clone "$srcdir/$_gitname" "$srcdir/$_gitname-build"
   cd "$srcdir/$_gitname-build"
 
-  ruby setup.rb config --sysconfdir="/etc/conf" || return 1
+  ruby setup.rb config --sysconfdir="/etc/ckit" || return 1
   ruby setup.rb setup || return 1
   ruby setup.rb install --prefix="${pkgdir}" || return 1
 }
