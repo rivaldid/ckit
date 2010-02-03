@@ -2,7 +2,7 @@
 # Maintainer: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=ckit-git
-pkgver=20100202
+pkgver=20100203
 pkgrel=1
 pkgdesc="Construction Kit - An unofficial Arch Linux repository manager"
 arch=('i686' 'x86_64')

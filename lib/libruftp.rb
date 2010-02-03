@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # 
 #  libruftp.rb
-#  ruFtp - ruby ftp client - 0.21
+#  ruFtp - ruby ftp client - 0.22
 #   
 #  Created by Nss 
 #             luca [at] tulug [dot] it.
@@ -27,8 +27,8 @@ require "pp"
 =end
 
 class Myftp < Net::FTP
-  #BLOCKSIZE=DEFAULT_BLOCKSIZE
-  BLOCKSIZE=32
+  BLOCKSIZE=DEFAULT_BLOCKSIZE
+  #BLOCKSIZE=32
   PROGRCMD=[:put,:get]
   FILECOMMAND=[:delete,:rmdir,:mkdir].concat PROGRCMD
   COMMAND=[:ls]
