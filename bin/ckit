@@ -33,7 +33,8 @@
 
 #################### ENVIRONMENT  ##########################
 
-libdir="/usr/lib/ruby/site_ruby/1.9.1"
+rubyver=`ruby -v | awk '{split($2, a, "p"); print a[1]}'`
+libdir="/usr/lib/ruby/site_ruby/$rubyver"
 conf="/etc/ckit/ckit.conf"
 
 #################### /ENVIRONMENT  #########################
