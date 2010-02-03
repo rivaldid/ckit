@@ -341,7 +341,7 @@ check(){
         fi
         
         # devel check
-        if [[ $develcheck == 0 ]] && is_devel $pkg && [[ -d $builddir/$pkg ]]; then 
+        if [[ $develcheck == "0" ]] && is_devel $pkg && [[ -d $builddir/$pkg ]]; then 
             cd "$builddir/$pkg" || echo "==> $pkg not available."
             # awk -v foo=something  assigns an awk variable
             # $0 being the whole line, $1 being the first field
@@ -357,7 +357,7 @@ check(){
             
         if (( "$result" < 0 )); then
             if is_devel $pkg; then
-                if [[ $develcheck == 0 ]]; then
+                if [[ $develcheck == "0" ]]; then
                     echo "  -> $pkg REPO:$repover LOCAL:$localver CURRENTLY:$version"
                     echo $pkg >> /tmp/CKIT
                     cat /tmp/CKIT $repodir/$checklog > /tmp/$checklog
@@ -386,7 +386,7 @@ updatepkgbuild(){
     echo "==> Updating local PKGBUILD from AUR"
     
     (( ${#pkgs[@]} == 0 )) \
-        && [[ $FROMLOG == 0 ]] \
+        && [[ $FROMLOG == "0" ]] \
         && copy_log_to_pkgs "$updatelog"
     
     if (( ${#pkgs[@]} == 0 )); then
@@ -438,7 +438,7 @@ build(){
         cd $builddir
         
         
-        if [[ $noconfirm == 0 ]]; then
+        if [[ $noconfirm == "0" ]]; then
             # aur
             [[ $aur == "0" ]] && get_aur_tarball $pkg
             # root
@@ -643,16 +643,16 @@ help(){
 
 #################### MAIN ##################################
 
+
 # test config file
 [[ ! -s $conf ]] \
         && die "==> Configuration file not found!" \
         || source $conf
 
 
-cd $repodir
-
 # test workspaces
 mkdir -p "$builddir" "$repodir" "$cachedir"
+
 
 # test logs
 logs=( "$buildlog" "$checklog" "$updatelog" "$deletelog" )
