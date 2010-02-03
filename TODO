@@ -1,1 +1,4 @@
- 
+ruby -v | awk '{split($2, a, "p"); print a[1]}'
+or
+ruby -v | tr [A-z] - | awk '{split($2, a, "-"); print a[1]}'
+
