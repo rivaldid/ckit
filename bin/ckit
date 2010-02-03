@@ -687,6 +687,7 @@ help(){
     echo "  -> -A: add built packages"
     echo "  -> -H: clear cache"
     echo "  -> -T: restore remote db from a failed upload"
+    echo "  -> -X: take a view of both the repository"
 }
 # /HELP
 
