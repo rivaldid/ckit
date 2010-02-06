@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # 
 #  libruftp.rb
-#  ruFtp - ruby ftp client - 0.22
+#  ruFtp - ruby ftp client - 0.3
 #   
 #  Created by Nss 
 #             luca [at] tulug [dot] it.
@@ -14,7 +14,7 @@
 require "net/ftp"
 require "ostruct"
 require "pp"
-
+require "timeout"
 =begin
 @options={:host=>nil,
     :resume=>false,
@@ -48,6 +48,7 @@ class Myftp < Net::FTP
       :command=>:ls,
       :uri=>nil,
       :debug_mode=>false,
+      :keepalive=>true,
       :filelist=>[]
     }
     return OpenStruct.new(options)
@@ -59,9 +60,12 @@ class Myftp < Net::FTP
 
   def exec(options)
     validate_options(options)
+    
     self.passive=options.passive
     self.debug_mode=options.debug_mode
     self.resume=options.resume
+    self.resume=options.keepalive
+    @options=options
     connect(options.host, options.port)
     
     if options.username.nil?
@@ -71,10 +75,12 @@ class Myftp < Net::FTP
     end
     
     chdir(options.directory)
-
+    
     if FILECOMMAND.include?(options.command)
       options.filelist.each do |file|
-          method(options.command).call file
+          
+            method(options.command).call file
+          
           if PROGRCMD.include?(options.command)
             yield " done"
           else
@@ -84,10 +90,17 @@ class Myftp < Net::FTP
     elsif COMMAND.include?(options.command)
       yield self.method(options.command).call
     end
-
   end
   
   private 
+  
+  def voidresp
+      result = Timeout::timeout(5) {
+        super
+      }
+  
+  end
+  
 
   def validate_options(options)
     if options.host.nil?
@@ -116,17 +129,16 @@ class Myftp < Net::FTP
             transferred = 0
             old_perc=-1
             begin
-              putbinaryfile(file, remotefile, blocksize) do |data|
-                transferred+=data.size
-                percent_finished=(((transferred).to_f/filesize.to_f)*100).truncate
-                if old_perc!=percent_finished
-                  print_percent(File.basename(file),percent_finished)
-                  old_perc=percent_finished
+                putbinaryfile(file, remotefile, blocksize) do |data|
+                    transferred+=data.size
+                    percent_finished=(((transferred).to_f/filesize.to_f)*100).truncate
+                    if old_perc!=percent_finished
+                      print_percent(File.basename(file),percent_finished)
+                      old_perc=percent_finished
+                    end  
                 end
-              end
             rescue Exception => detail
                 $stderr.puts "Error: #{detail}"
-                exit
             end
           end
   end
@@ -149,7 +161,6 @@ class Myftp < Net::FTP
            end
          rescue Exception => detail
            $stderr.puts "Error: #{detail}"
-           exit
          end
        end
   end
