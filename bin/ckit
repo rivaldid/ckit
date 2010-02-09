@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.52
+#  CKIT - Construction Kit - 0.53
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -33,8 +33,7 @@
 
 #################### ENVIRONMENT  ##########################
 
-rubyver=$(ruby -v | awk '{split($2, a, "p"); print a[1]}')
-libdir="/usr/lib/ruby/site_ruby/$rubyver"
+libdir=$(ruby -rrbconfig -e 'puts Config::CONFIG["sitelibdir"]') 
 conf="/etc/ckit/ckit.conf"
 
 #################### /ENVIRONMENT  #########################
