@@ -34,7 +34,8 @@
 #################### ENVIRONMENT  ##########################
 
 libdir=$(ruby -rrbconfig -e 'puts Config::CONFIG["sitelibdir"]') 
-conf="/etc/ckit/ckit.conf"
+conf=$(ruby -r rbconfig -e 'puts Config::CONFIG["sysconfdir"]')/ckit.conf 
+#conf="/etc/ckit/ckit.conf"
 
 #################### /ENVIRONMENT  #########################
 
