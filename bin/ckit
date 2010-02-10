@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.53
+#  CKIT - Construction Kit - 0.531
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -33,9 +33,8 @@
 
 #################### ENVIRONMENT  ##########################
 
-libdir=$(ruby -rrbconfig -e 'puts Config::CONFIG["sitelibdir"]') 
-conf=$(ruby -r rbconfig -e 'puts Config::CONFIG["sysconfdir"]')/ckit.conf 
-#conf="/etc/ckit/ckit.conf"
+libdir=$(ruby -rrbconfig -e 'puts Config::CONFIG["sitelibdir"]')
+conf="/etc/ckit/ckit.conf"
 
 #################### /ENVIRONMENT  #########################
 
