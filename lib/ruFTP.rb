@@ -83,7 +83,7 @@ class Optparse
       if !args.empty?
         options.filelist=args
       end
-    
+
     rescue OptionParser::ParseError => detail
       $stderr.puts "Error: #{detail}"
       puts parser

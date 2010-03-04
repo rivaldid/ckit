@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # 
 #  libruftp.rb
-#  ruFtp - ruby ftp client - 0.31
+#  ruFtp - ruby ftp client - 0.2
 #   
 #  Created by Nss 
 #             luca [at] tulug [dot] it.
@@ -15,6 +15,7 @@ require "net/ftp"
 require "ostruct"
 require "pp"
 require "timeout"
+require "utils"
 
 =begin
 @options={:host=>nil,
@@ -29,8 +30,8 @@ require "timeout"
 
 class Myftp < Net::FTP
   BLOCKSIZE=DEFAULT_BLOCKSIZE
-  RECVTIMEOUT=10
-  #BLOCKSIZE=32
+  RECVTIMEOUT=10 #wait RECVTIMEOUT second before hang up the connection
+  #BLOCKSIZE=512
   PROGRCMD=[:put,:get]
   FILECOMMAND=[:delete,:rmdir,:mkdir].concat PROGRCMD
   COMMAND=[:ls]
@@ -50,7 +51,9 @@ class Myftp < Net::FTP
       :command=>:ls,
       :uri=>nil,
       :debug_mode=>false,
-      :filelist=>[]
+      :filelist=>[],
+      :show_percent=>true,
+      :show_time=>true
     }
     return OpenStruct.new(options)
   end
@@ -59,49 +62,47 @@ class Myftp < Net::FTP
     super(*args)
   end
 
+  #options is OpenStruct class
   def exec(options)
-    validate_options(options)
-    
-    self.passive=options.passive
-    self.debug_mode=options.debug_mode
-    self.resume=options.resume
     @options=options
-    connect(options.host, options.port)
+    validate_options(@options)
+   
+    connect(@options.host, @options.port)
     
-    if options.username.nil?
+    if @options.username.nil?
       login()
     else
-      login(options.username,options.password)
+      login(@options.username,@options.password)
     end
     
-    chdir(options.directory)
+    chdir(@options.directory)
     
-    if FILECOMMAND.include?(options.command)
-      options.filelist.each do |file|
+    if FILECOMMAND.include?(@options.command)
+      @options.filelist.each do |file|
           
-          method(options.command).call file
+        method(@options.command).call file
           
-          if PROGRCMD.include?(options.command)
-            yield " done\n"
-          else
-            yield "  -> #{file}... done\n"
-          end
+        if PROGRCMD.include?(@options.command)
+          yield " done\n"
+        else
+          yield "  -> #{file}... done\n"
+        end
       end
-    elsif COMMAND.include?(options.command)
-      yield self.method(options.command).call
+    elsif COMMAND.include?(@options.command)
+      yield self.method(@options.command).call
     end
   end
   
   private 
   
   def tvoidresp
-      begin  
-        result = Timeout::timeout(RECVTIMEOUT) {
-          voidresp
-        }
-      rescue Timeout::Error => detail
-            $stderr.puts "Warning: #{detail}" if @debug_mode
-      end
+    begin
+      result = Timeout::timeout(RECVTIMEOUT) {
+        voidresp
+      }
+    rescue Timeout::Error => detail
+      $stderr.puts "Warning: #{detail}" if @options.debug_mode
+    end
   end
   
 
@@ -119,45 +120,33 @@ class Myftp < Net::FTP
     STDOUT.flush
   end
   
-  def print_percent(file,percent) 
-    print "\r  -> #{file}... #{percent}%"
+  def print_info(file,info)
+    print "\r  -> #{file}"
+    print "\t #{info.percent_finisced}%" if @options.show_percent
+    print "\t #{info.remaining_time}" if @options.show_time
     STDOUT.flush
   end
   
   def put(file, remotefile = File.basename(file), blocksize = BLOCKSIZE, &block)
-          unless @binary
-            self.puttextfile(file, remotefile, &block)
-          else
-            filesize=File.size file
-            transferred = 0
-            old_perc=-1
-            
-                putbinaryfile(file, remotefile, blocksize) do |data|
-                    transferred+=data.size
-                    percent_finished=(((transferred).to_f/filesize.to_f)*100).truncate
-                    if old_perc!=percent_finished
-                      print_percent(File.basename(file),percent_finished)
-                      old_perc=percent_finished
-                    end  
-                end
-           
-          end
+    unless @binary
+      self.puttextfile(file, remotefile, &block)
+    else
+      upload=TransfertStatus.new(File.size file)
+      putbinaryfile(file, remotefile, blocksize) do |data|
+        upload.updatestatus(data.size)
+        print_info(File.basename(file),upload)
+      end
+    end
   end
   
   def get(remotefile, localfile = File.basename(remotefile), blocksize = BLOCKSIZE, &block)
     unless @binary
       gettextfile(remotefile, localfile, &block)
-    else
-      filesize=size remotefile
-      transferred = 0
-      old_perc=-1
+    else		
+      download=TransfertStatus.new(size remotefile)
       getbinaryfile(remotefile, localfile, blocksize) do |data|
-          transferred+=data.size
-          percent_finished=(((transferred).to_f/filesize.to_f)*100).truncate
-          if old_perc!=percent_finished
-            print_percent(File.basename(File.basename(remotefile)),percent_finished)
-            old_perc=percent_finished
-          end
+        download.updatestatus(data.size)
+        print_info(File.basename(remotefile),download)
       end
     end
   end
@@ -181,26 +170,23 @@ class Myftp < Net::FTP
   end
   
   # File net/ftp.rb, line 466
-      def storlines(cmd, file, &block) # :yield: line
-        synchronize do
-          voidcmd("TYPE A")
-          conn = transfercmd(cmd)
-          loop do
-            buf = file.gets
-            break if buf == nil
-            if buf[-2, 2] != CRLF
-              buf = buf.chomp + CRLF
-            end
-            conn.write(buf)
-            yield(buf) if block
-          end
-          conn.close
-          tvoidresp
+  def storlines(cmd, file, &block) # :yield: line
+    synchronize do
+      voidcmd("TYPE A")
+      conn = transfercmd(cmd)
+      loop do
+        buf = file.gets
+        break if buf == nil
+        if buf[-2, 2] != CRLF
+          buf = buf.chomp + CRLF
         end
+        conn.write(buf)
+        yield(buf) if block
       end
-  
-  
-  
+      conn.close
+      tvoidresp
+    end
+  end
 end
 
 if __FILE__==$0
