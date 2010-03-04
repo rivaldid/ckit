@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 #
 #  utils.rb
-#  ruFtp - ruby ftp client - 0.4
+#  ruFtp - ruby ftp client - 0.5
 #
 #  Created by Nss
 #             luca [at] tulug [dot] it.
