@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # 
 #  libruftp.rb
-#  ruFtp - ruby ftp client - 0.2
+#  ruFtp - ruby ftp client - 0.5
 #   
 #  Created by Nss 
 #             luca [at] tulug [dot] it.
