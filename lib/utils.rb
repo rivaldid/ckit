@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 #
 #  utils.rb
-#  ruFtp - ruby ftp client - 0.4
+#  ruFtp - ruby ftp client - 0.5
 #
 #  Created by Nss
 #             luca [at] tulug [dot] it.
@@ -12,26 +12,29 @@
 
 class TransfertStatus
   attr_reader :percent_finisced
-
+  OUTPUT_WAITING_PRECISION=""
   def initialize(totalsize)
+    if totalsize<=0 then
+ 	raise "#{File.basename __FILE__} Invalid data transfert size"
+    end
     @totalsize=totalsize.to_f;
     @starttime=Time.now.to_f;
-    @precision=75 #how many step need for calculate remaing time
+    @precision=60 #how many step need for calculate remaing time
     @average_time=[]
-    @average_time<<0
-    @transferedsize=0;
-    @percent_finisced=0;
+    @average_time << 0
+    @transferedsize=0
+    @percent_finisced=0
   end
 
 
 
-	def calc_average(time,transferedsize)
-		if @precision>0
-			@precision -=1
-		else
-			@average_time<<((@average_time.last*(@average_time.size-1))+(time/transferedsize))/(@average_time.size)
-		end
+  def calc_average(time,transferedsize)
+	if @precision>0
+		@precision -=1
+	else
+		@average_time<<((@average_time.last*(@average_time.size-1))+(time/transferedsize))/(@average_time.size)
 	end
+  end
 
   def updatestatus(transferedsize)
     @transferedsize+=transferedsize;
@@ -50,7 +53,7 @@ class TransfertStatus
       sec=(((@average_time.last*remaining_size)%60).truncate).to_s.rjust(2,'0')
       "[#{min}:#{sec}]"
     else
-      "[undef]"
+      OUTPUT_WAITING_PRECISION
     end
   end
 end

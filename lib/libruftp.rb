@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # 
 #  libruftp.rb
-#  ruFtp - ruby ftp client - 0.4
+#  ruFtp - ruby ftp client - 0.5
 #   
 #  Created by Nss 
 #             luca [at] tulug [dot] it.
@@ -17,23 +17,12 @@ require "pp"
 require "timeout"
 require "utils"
 
-=begin
-@options={:host=>nil,
-    :resume=>false,
-    :password=>nil,
-    :username=>nil,
-    :passive=>false,
-    :command=>nil,
-    :filelist=>[]
-  }
-=end
-
 class Myftp < Net::FTP
-  BLOCKSIZE=DEFAULT_BLOCKSIZE
-  RECVTIMEOUT=10 #wait RECVTIMEOUT second before hang up the connection
+  BLOCKSIZE=DEFAULT_BLOCKSIZE #default blocksize to send and receive
+  RECVTIMEOUT=10 #wait RECVTIMEOUT seconds before hang up the connection
   #BLOCKSIZE=512
   PROGRCMD=[:put,:get]
-  FILECOMMAND=[:delete,:rmdir,:mkdir].concat PROGRCMD
+  FILECOMMAND=[:delete,:rmdir,:mkdir].concat PROGRCMD #command who requires files
   COMMAND=[:ls]
   
   def self.supported_command
