@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.532
+#  CKIT - Construction Kit - 0.54
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -108,17 +108,10 @@ ftp_put_repo(){
 
 ftp_pkg_delete(){
     pkg=$1
-    found=0
-    while read -r line; do
-        [[ $line = */ ]] || continue
-        i="${line%/}"
-        repopkg=${i%-*-*}
-        if [[ $repopkg == $pkg ]]; then
-            found=1
-            ftp_run delete $i-$arch$PKGEXT
-        fi
-    done < <(tar ztf $repo)
-    (( found == 0 )) && echo "  -> $pkg not found"
+    target=$(ftp_run ls '' | awk -v "pkg=$pkg" '$0 ~ pkg {print $9}')
+    if [[ -z $target ]]; then echo "  -> $pkg not found"
+		else ftp_run delete $target
+    fi
 }
 
 ftp_checkfile(){
