@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.54
+#  CKIT - Construction Kit - 0.551
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -11,6 +11,7 @@
 #
 #  Authors:
 #       Dario 'Dax' Vilardi     : bash developer
+#       Corrado 'Bardo'         : bash developer
 #       Luca 'Nss'              : ruby developer
 #       Giovanni Scafora        : packager
 #
@@ -140,11 +141,15 @@ unlock(){
 }
 
 post_build(){
+    # PKGDEST
+    [[ $PKGDEST ]] || PKGDEST="$builddir/$1"
+    cd $PKGDEST
     pkg=($1*$PKGEXT)
+    
     if [[ -s "${pkg[0]}" ]]; then
     
         echo "==> Yo, $1 done :)"
-        mv "$builddir/$1/$1*$PKGEXT" "$repodir"
+        mv "$PKGDEST/$pkg" "$repodir"
     
         echo "$1" >> /tmp/CKIT
         cat /tmp/CKIT "$repodir/$buildlog" > "/tmp/$buildlog"
@@ -698,8 +703,12 @@ help(){
 
 # test config file
 [[ ! -s "$conf" ]] \
-        && die "==> Configuration file not found!" \
+        && die "==> ckit.conf not found!" \
         || source "$conf"
+
+[[ ! -s "/etc/makepkg.conf" ]] \
+        && die "==> makepkg.conf not found!" \
+        || source "/etc/makepkg.conf"
 
 
 # test workspaces
