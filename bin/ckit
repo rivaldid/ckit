@@ -54,10 +54,11 @@ get_aur_tarball(){
     url="http://aur.archlinux.org/packages/$pkg/$pkg/PKGBUILD"
     if PKGBUILD=$(wget -q -O - "$url"); then
         printf "  -> Getting $pkg from AUR... "
-        if wget http://aur.archlinux.org/packages/$pkg/$pkg.tar.gz &>/dev/null; then
+        wget "http://aur.archlinux.org/packages/$pkg/$pkg.tar.gz" -o /dev/null
+		if [ $? == 0 ] ; then
             echo "done"
             tar -xf "$pkg.tar.gz"
-            rm $pkg.tar.gz
+            rm "$pkg.tar.gz"
         else
             echo "failed"
         fi
@@ -68,34 +69,34 @@ get_aur_tarball(){
 
 ftp_run(){
     # available commands: ls,put,get,delete,rmdir
-    command=$1
-    file=$2
-    ruby -I $libdir $libdir/ruFTP.rb -H $hostname -u $user -p $pass -d $remoteroot/$arch -c $command $file
+    command="$1"
+    file="$2"
+    ruby -I "$libdir" "$libdir"/ruFTP.rb -H "$hostname" -u "$user" -p "$pass" -d "$remoteroot/$arch" -c "$command" "$file"
 }
 
 ftp_get_repo(){
-    cd $repodir
-    [[ -f $repo ]] && rm $repo
+    cd "$repodir"
+    [[ -f "$repo" ]] && rm "$repo"
     
     echo "==> Getting db "
-    ftp_checkfile $repo && ftp_run get $repo
+    ftp_checkfile "$repo" && ftp_run get "$repo"
 }
 
 ftp_put(){
-    file=$1
-    ftp_run put $file
+    file="$1"
+    ftp_run put "$file"
 }
 
 ftp_delete(){
-    file=$1
-    ftp_run delete $file
+    file="$1"
+    ftp_run delete "$file"
 }
 
 ftp_put_repo(){
     cp "$repo" "$repo"_prev
     
     echo "==> Putting db "
-    ftp_put $repo
+    ftp_put "$repo"
     
     ftp_get_repo
     i=$(stat -c%s "$repo")
@@ -107,16 +108,16 @@ ftp_put_repo(){
 }
 
 ftp_pkg_delete(){
-    pkg=$1
+    pkg="$1"
     target=$(ftp_run ls '' | awk -v "pkg=$pkg" '$0 ~ pkg {print $9}')
-    if [[ -z $target ]]; then echo "  -> $pkg not found"
-		else ftp_run delete $target
+    if [[ -z "$target" ]]; then echo "  -> $pkg not found"
+		else ftp_run delete "$target"
     fi
 }
 
 ftp_checkfile(){
-    file=$1
-    ftp_run ls '' | grep $file &>/dev/null \
+    file="$1"
+    ftp_run ls '' | grep "$file" &>/dev/null \
         && return 0 \
         || return 1
 }
@@ -124,10 +125,10 @@ ftp_checkfile(){
 lock(){
     ftp_checkfile lock.lk \
         && die "==> Repository in maintenance yet. Please wait!"
-    touch $repodir/lock.lk
-    echo $(whoami) - $(date) > lock.lk
+    touch "$repodir/lock.lk"
+    echo "$USER" - $(date) > lock.lk
     echo "==> Locking ftp to prevent jumble between maintenances"
-    ftp_put $repodir/lock.lk
+    ftp_put "$repodir/lock.lk"
 }
 
 unlock(){
@@ -135,7 +136,7 @@ unlock(){
     ftp_delete lock.lk
     ftp_checkfile lock.lk \
         && echo "  -> Failed at unlock, remove lock.lk manually!"
-    rm $repodir/lock.lk
+    rm "$repodir/lock.lk"
 }
 
 post_build(){
@@ -143,15 +144,15 @@ post_build(){
     if [[ -s "${pkg[0]}" ]]; then
     
         echo "==> Yo, $1 done :)"
-        mv $builddir/$1/$1*$PKGEXT $repodir
+        mv "$builddir/$1/$1*$PKGEXT" "$repodir"
     
-        echo $1 >> /tmp/CKIT
-        cat /tmp/CKIT $repodir/$buildlog > /tmp/$buildlog
+        echo "$1" >> /tmp/CKIT
+        cat /tmp/CKIT "$repodir/$buildlog" > "/tmp/$buildlog"
         rm /tmp/CKIT
-        mv /tmp/$buildlog $repodir/$buildlog
+        mv "/tmp/$buildlog" "$repodir/$buildlog"
         
         # delete sources for stable packages
-        if ! is_devel $1; then deletesrc_run $1; fi
+        if ! is_devel "$1"; then deletesrc_run "$1"; fi
  
     else
         echo "==> WTF, $1 fails at building :("
@@ -160,39 +161,39 @@ post_build(){
 
 
 rmdirsrc(){
-    [[ -d $builddir/$1/src ]] \
-        && rm -rf $builddir/$1/src \
+    [[ -d "$builddir/$1/src" ]] \
+        && rm -rf "$builddir/$1/src" \
         && echo "  -> $builddir/$1/src removed"
 }
 
 rmsrc(){
     target=( "zip" "ZIP" "rar" "RAR" "bz2" "gz" "part" "jar" "Jar" "deb" "html" "bin" "run" "rpm" "tgz" "pk3" )
     for i in "${target[@]}"; do
-        rm $builddir/$1/*$i &>/dev/null && echo "  -> $i removed"
+        rm "$builddir/$1/*$i" &>/dev/null && echo "  -> $i removed"
     done
 }
 
 copy_log_to_pkgs(){
     IFS=$'\n'
-    [[ -s $repodir/$1 ]] \
-        && pkgs=($(< $repodir/$1)) \
+    [[ -s "$repodir/$1" ]] \
+        && pkgs=($(< "$repodir/$1")) \
         || die "==> $1 empty"
 }
 
 is_devel(){
-    pkg=$1
+    pkg="$1"
     REGEX=".*-(svn|cvs|hg|git|bzr|darcs|dev|devel)"
-    [[ "$pkg" =~ $REGEX ]] \
+    [[ "$pkg" =~ "$REGEX" ]] \
         && return 0 \
         || return 1
 }
 
 deletesrc_run(){
-    pkg=$1
+    pkg="$1"
     [[ -d $builddir/$pkg ]] \
         && echo "==> Cleaning $pkg directory" \
-        && rmdirsrc $pkg \
-        && rmsrc $pkg
+        && rmdirsrc "$pkg" \
+        && rmsrc "$pkg"
 }
 
 
@@ -209,14 +210,14 @@ deletesrc_run(){
 # DELETESRC
 deletesrc(){
     
-    if [[ $FROMLOG == 0 ]] && (( ${#pkgs[@]} == 0 )); then 
-        copy_log_to_pkgs $deletelog
+    if [[ "$FROMLOG" == 0 ]] && (( "${#pkgs[@]}" == 0 )); then
+        copy_log_to_pkgs "$deletelog"
     else
-        (( ${#pkgs[@]} == 0 )) && die "==> Packages needed!"
+        (( "${#pkgs[@]}" == 0 )) && die "==> Packages needed!"
     fi
     
     for pkg in "${pkgs[@]}"; do
-        deletesrc_run $pkg
+        deletesrc_run "$pkg"
     done
 }
 # /DELETESRC
@@ -226,16 +227,16 @@ deletesrc(){
 # EDITPKG
 editpkg(){
     read -p "==> Package to edit: " pkg
-    if [[ -d $builddir/$pkg ]]; then
+    if [[ -d "$builddir/$pkg" ]]; then
         echo "==> $pkg:"
-        cd $builddir/$pkg
+        cd "$builddir/$pkg"
         for file in *; do 
-            [[ -f $file ]] && echo "  -> $file"
+            [[ -f "$file" ]] && echo "  -> $file"
         done
         read -p "==> Which one to edit? " file
-        if [[ -f $builddir/$pkg/$file ]]; then
+        if [[ -f "$builddir/$pkg/$file" ]]; then
             echo "==> Editing $pkg/$file"
-            $editor "$builddir/$pkg/$file" && echo "  -> Done."
+            "$editor" "$builddir/$pkg/$file" && echo "  -> Done."
         else
             echo "==> $file not found."
         fi
@@ -249,14 +250,14 @@ editpkg(){
 # EDITLOG
 editlog(){
     echo "==> Available logs:"
-    cd $repodir
+    cd "$repodir"
     for file in *log; do
         echo "  -> $file"
     done
     read -p "==> Which one to edit? " log
-    if [[ -f $repodir/$log ]]; then
+    if [[ -f "$repodir/$log" ]]; then
         echo "==> Editing $repodir/$log"
-        $editor $repodir/$log && echo "  -> Done."
+        "$editor" "$repodir/$log" && echo "  -> Done."
     else
         echo "==> $log not found."
     fi
@@ -268,9 +269,9 @@ editlog(){
 # OWNPKG
 ownpkg(){
     read -p "==> Package to own: " pkg
-    if [[ -d $builddir/$pkg ]]; then
+    if [[ -d "$builddir/$pkg" ]]; then
         echo "  -> Owning $pkg "
-        sudo chown -R $USER $builddir/$pkg && echo "  -> Done."
+        sudo chown -R "$USER" "$builddir/$pkg" && echo "  -> Done."
     else
         echo "  -> $pkg not found."
     fi
@@ -281,7 +282,7 @@ ownpkg(){
 
 # CLEARCACHE
 clearcache(){
-    rm $cachedir/*
+    rm "$cachedir/*"
 }
 # /CLEARCACHE
 
@@ -290,7 +291,7 @@ clearcache(){
 # RESTOREDB
 restoredb(){
 
-    cd $repodir
+    cd "$repodir"
     echo "==> Restoring db from latest backup."
     mv "$repo"_prev "$repo"
     ftp_put_repo
@@ -303,8 +304,8 @@ restoredb(){
 # CHECK
 check(){
 
-    [[ -f $repodir/$checklog ]] && rm $repodir/$checklog;
-    touch $repodir/$checklog
+    [[ -f "$repodir/$checklog" ]] && rm "$repodir/$checklog"
+    touch "$repodir/$checklog"
 
     ftp_get_repo
     echo "==> Checking for outdated packages"
@@ -312,11 +313,11 @@ check(){
 
     while read -r line; do 
         
-        [[ $line = */ ]] || continue
+        [[ "$line" = */ ]] || continue
         i="${line%/}"
 
-        pkg=${i%-*-*}
-        repover=${i#$pkg-}
+        pkg="${i%-*-*}"
+        repover="${i#$pkg-}"
         
         # AUR check
         url="http://aur.archlinux.org/packages/$pkg/$pkg/PKGBUILD"
@@ -327,46 +328,46 @@ check(){
         fi
         
         # local check
-        if pacman -Q $pkg &> /dev/null; then
+        if pacman -Q "$pkg" &> /dev/null; then
             localver="$(LANG=C pacman -Qi "$pkg" | awk '/^Version/ {print $3}')"
         else
             localver="Null"
         fi
         
         # devel check
-        if [[ $develcheck == "0" ]] && is_devel $pkg && [[ -d $builddir/$pkg ]]; then 
+        if [[ "$develcheck" == "0" ]] && is_devel "$pkg" && [[ -d "$builddir/$pkg" ]]; then 
             cd "$builddir/$pkg" || echo "==> $pkg not available."
             # awk -v foo=something  assigns an awk variable
             # $0 being the whole line, $1 being the first field
             develver=$(makepkg -o 2>&1 | awk -v "pkg=$pkg" '$0 ~ pkg {print $6}')
-            cd ~-
-            version=$develver
+            cd -
+            version="$develver"
         else
-            version=$aurver
+            version="$aurver"
         fi
         
         # check
         result=$(vercmp "$repover" "$version")
             
         if (( "$result" < 0 )); then
-            if is_devel $pkg; then
-                if [[ $develcheck == "0" ]]; then
+            if is_devel "$pkg"; then
+                if [[ "$develcheck" == "0" ]]; then
                     echo "  -> $pkg REPO:$repover LOCAL:$localver CURRENTLY:$version"
-                    echo $pkg >> /tmp/CKIT
-                    cat /tmp/CKIT $repodir/$checklog > /tmp/$checklog
+                    echo "$pkg" >> /tmp/CKIT
+                    cat /tmp/CKIT "$repodir/$checklog" > "/tmp/$checklog"
                     rm /tmp/CKIT
-                    mv /tmp/$checklog $repodir/$checklog
+                    mv "/tmp/$checklog" "$repodir/$checklog"
                 fi
             else
                 echo "  -> $pkg REPO:$repover LOCAL:$localver CURRENTLY:$version"
-                echo $pkg >> /tmp/CKIT
-                cat /tmp/CKIT $repodir/$checklog > /tmp/$checklog
+                echo "$pkg" >> /tmp/CKIT
+                cat /tmp/CKIT "$repodir/$checklog" > "/tmp/$checklog"
                 rm /tmp/CKIT
-                mv /tmp/$checklog $repodir/$checklog
+                mv "/tmp/$checklog" "$repodir/$checklog"
             fi
         fi
  
-    done < <(tar ztf $repo)
+    done < <(tar ztf "$repo")
     
 }
 # /CHECK
@@ -378,19 +379,19 @@ updatepkgbuild(){
     
     echo "==> Updating local PKGBUILD from AUR"
     
-    (( ${#pkgs[@]} == 0 )) \
-        && [[ $FROMLOG == "0" ]] \
+    (( "${#pkgs[@]}" == 0 )) \
+        && [[ "$FROMLOG" == "0" ]] \
         && copy_log_to_pkgs "$updatelog"
     
-    if (( ${#pkgs[@]} == 0 )); then
+    if (( "${#pkgs[@]}" == 0 )); then
     
         ftp_get_repo
         
         IFS=$'\n' read -d '' -a lines < <(tar ztf "$repo")
         for line in "${lines[@]}"; do
-            [[ $line = */ ]] || continue
+            [[ "$line" = */ ]] || continue
             i="${line%/}"
-            pkg=${i%-*-*}
+            pkg="${i%-*-*}"
             read -p "  -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         done
@@ -412,8 +413,8 @@ updatepkgbuild(){
 build(){
 
     # filter & replace $pkgs from checklog if asked
-    if (( ${#pkgs[@]} == 0 )); then
-        if [[ $FROMLOG == "0" ]]; then
+    if (( "${#pkgs[@]}" == 0 )); then
+        if [[ "$FROMLOG" == "0" ]]; then
             copy_log_to_pkgs "$checklog"
         else
             die "==> Nothing to build."
@@ -428,39 +429,39 @@ build(){
         i=""
         
         echo "==> $pkg"
-        cd $builddir
+        cd "$builddir"
         
         
-        if [[ $noconfirm == "0" ]]; then
+        if [[ "$noconfirm" == "0" ]]; then
             # aur
-            [[ $aur == "0" ]] && get_aur_tarball $pkg
+            [[ "$aur" == "0" ]] && get_aur_tarball "$pkg"
             # root
-            [[ $root == "0" ]] && sudo="sudo" && asroot="--asroot"
+            [[ "$root" == "0" ]] && sudo="sudo" && asroot="--asroot"
             # install
-            [[ $install == "0" ]] && i="-i"
+            [[ "$install" == "0" ]] && i="-i"
             # skipmd5sums
-            [[ $skipmd5sums == "0" ]] && skipinteg="--skipinteg"
+            [[ "$skipmd5sums" == "0" ]] && skipinteg="--skipinteg"
             # filter
-            [[ ! -s $pkg/PKGBUILD ]] \
+            [[ ! -s "$pkg/PKGBUILD" ]] \
                 && die "  -> PKGBUILD not found."
             # makepkg
-            cd $pkg && $sudo makepkg $i -s $asroot $skipinteg
-            post_build $pkg
+            cd "$pkg" && "$sudo" makepkg "$i" -s "$asroot" "$skipinteg"
+            post_build "$pkg"
         else
             # build?
             read -p "  -> do you want upgrade? (y/n) " answer
             if [[ "$answer" == "y" ]]; then
             
                 # aur
-                if [[ $aur == "0" ]]; then
-                    get_aur_tarball $pkg
+                if [[ "$aur" == "0" ]]; then
+                    get_aur_tarball "$pkg"
                 else
                     read -p "  -> Do you want get tarball from AUR? (y/n) " answer
-                    [[ "$answer" == "y" ]] && get_aur_tarball $pkg
+                    [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
                 fi
                 
                 # root
-                if [[ $root == "0" ]]; then
+                if [[ "$root" == "0" ]]; then
                     sudo="sudo"
                     asroot="--asroot"
                 else
@@ -469,7 +470,7 @@ build(){
                 fi
                 
                 # install
-                if [[ $install == "0" ]]; then
+                if [[ "$install" == "0" ]]; then
                     i="-i"
                 else
                     read -p "  -> Do you want install package after build? (y/n) " answer
@@ -477,7 +478,7 @@ build(){
                 fi
                 
                 # skipmd5sums
-                if [[ $skipmd5sums == "0" ]]; then
+                if [[ "$skipmd5sums" == "0" ]]; then
                     skipinteg="--skipinteg"
                 else
                     read -p "  -> Do you want skip md5sums check? (y/n) " answer
@@ -485,12 +486,12 @@ build(){
                 fi
                 
                 # filter
-                [[ ! -s $pkg/PKGBUILD ]] \
+                [[ ! -s "$pkg/PKGBUILD" ]] \
                     && die "  -> PKGBUILD not found."
                 
                 # makepkg
-                cd $pkg && $sudo makepkg $i -s $asroot $skipinteg
-                post_build $pkg
+                cd "$pkg" && "$sudo" makepkg "$i" -s "$asroot" "$skipinteg"
+                post_build "$pkg"
                 
             fi
         fi
@@ -513,10 +514,10 @@ build(){
 # ADD
 add(){
 
-    cd $repodir
+    cd "$repodir"
     
     # init
-    [[ ! -s $repodir/$buildlog ]] \
+    [[ ! -s "$repodir/$buildlog" ]] \
         && die "==> Nothing to add, build packages first!"
         
     # lock ftp
@@ -529,15 +530,15 @@ add(){
     echo "==> Deleting previous packages"
     copy_log_to_pkgs "$buildlog"
     for pkg in "${pkgs[@]}"; do
-        ftp_pkg_delete $pkg
+        ftp_pkg_delete "$pkg"
     done
-    rm $buildlog $checklog
+    rm "$buildlog" "$checklog"
     
     # repo-add
     echo "==> Adding packages queued"
-    for file in *$PKGEXT; do 
+    for file in *"$PKGEXT"; do 
         printf "  -> $file... "
-        repo-add $repo $file &>/dev/null && \
+        repo-add "$repo" "$file" &>/dev/null && \
             echo "done" || \
             echo "fail"
     done
@@ -547,8 +548,8 @@ add(){
     
     # put new packages
     echo "==> Uploading packages"
-    for file in *$PKGEXT; do 
-        ftp_put $file && mv $file $cachedir
+    for file in *"$PKGEXT"; do 
+        ftp_put "$file" && mv "$file" "$cachedir"
     done
     
     # unlock ftp
@@ -565,9 +566,9 @@ add(){
 remove(){
 
     # init
-    (( ${#pkgs[@]} == 0 )) && die "==> Packages needed!"
+    (( "${#pkgs[@]}" == 0 )) && die "==> Packages needed!"
 
-    cd $repodir
+    cd "$repodir"
     
     # lock ftp
     lock
@@ -575,13 +576,13 @@ remove(){
     ftp_get_repo
     echo "==> Removing from ftp"
     for pkg in "${pkgs[@]}"; do
-        ftp_pkg_delete $pkg
+        ftp_pkg_delete "$pkg"
     done
     
     echo "==> Removing from db"
     for pkg in "${pkgs[@]}"; do
         printf "  -> $pkg... "
-        repo-remove $repo $pkg &>/dev/null \
+        repo-remove "$repo" "$pkg" &>/dev/null \
             && echo "done" \
             || echo "failed"
     done
@@ -597,23 +598,23 @@ remove(){
 
 # DIFFREPO
 diffrepo(){
-    cd $repodir
-    if [[ $arch == "i686" ]]; then
+    cd "$repodir"
+    if [[ "$arch" == "i686" ]]; then
         ftp_get_repo
-        mv $repo repo1
+        mv "$repo" repo1
         arch="x86_64"
-        echo "==> Temporally changing arch to $arch"
+        echo "==> Temporarily changing arch to $arch"
         ftp_get_repo
-        mv $repo repo2
+        mv "$repo repo2"
         arch="i686"
         echo "==> Restoring arch to $arch"
     else
         ftp_get_repo
-        mv $repo repo1
+        mv "$repo" repo1
         arch="i686"
-        echo "==> Temporally changing arch to $arch"
+        echo "==> Temporarily changing arch to $arch"
         ftp_get_repo
-        mv $repo repo2
+        mv "$repo" repo2
         arch="x86_64"
         echo "==> Restoring arch to $arch"
     fi
@@ -623,22 +624,22 @@ diffrepo(){
     touch list1 list2
     
     while read -r line; do
-        [[ $line = */ ]] || continue
+        [[ "$line" = */ ]] || continue
         i="${line%/}"
-        pkg=${i%-*-*}
-        ver=${i#$pkg-}
-        echo $pkg - $ver > foo
+        pkg="${i%-*-*}"
+        ver="${i#$pkg-}"
+        echo "$pkg" - "$ver" > foo
         cat foo list1 > bar
         rm foo
         mv bar list1
     done < <(tar ztf repo1)
     
     while read -r line; do
-        [[ $line = */ ]] || continue
+        [[ "$line" = */ ]] || continue
         i="${line%/}"
-        pkg=${i%-*-*}
-        ver=${i#$pkg-}
-        echo $pkg - $ver > foo
+        pkg="${i%-*-*}"
+        ver="${i#$pkg-}"
+        echo "$pkg" - "$ver" > foo
         cat foo list2 > bar
         rm foo
         mv bar list2
@@ -646,7 +647,7 @@ diffrepo(){
     
     rm -f repo1 repo2
     
-    $diff list1 list2
+    "$diff" list1 list2
         
 }
 # /DIFFREPO
@@ -696,9 +697,9 @@ help(){
 
 
 # test config file
-[[ ! -s $conf ]] \
+[[ ! -s "$conf" ]] \
         && die "==> Configuration file not found!" \
-        || source $conf
+        || source "$conf"
 
 
 # test workspaces
@@ -708,7 +709,7 @@ mkdir -p "$builddir" "$repodir" "$cachedir"
 # test logs
 logs=( "$buildlog" "$checklog" "$updatelog" "$deletelog" )
 for log in "${logs[@]}"; do
-    [[ ! -f $repodir/$log ]] && touch $repodir/$log
+    [[ ! -f "$repodir/$log" ]] && touch "$repodir/$log"
 done
 
 
@@ -763,7 +764,7 @@ while getopts "ABarisnCdRUHLTOEDXh" opt; do
         X) DIFFREPO=0;;
         h) HELP=0;;
     esac
-    x=$OPTIND
+    x="$OPTIND"
 done
 shift $(($x-1))
 pkgs=("$@")
@@ -771,34 +772,34 @@ pkgs=("$@")
 
 
 # rule
-if [[ $REMOVE == "0" ]]; then
-    [[ $BUILD == "0" ]] && die "==> Not allowed."
-    [[ $RESTOREDB == "0" ]] && die "==> Not allowed."
-    [[ $ADD == "0" ]] && die "==> Not allowed."
+if [[ "$REMOVE" == "0" ]]; then
+    [[ "$BUILD" == "0" ]] && die "==> Not allowed."
+    [[ "$RESTOREDB" == "0" ]] && die "==> Not allowed."
+    [[ "$ADD" == "0" ]] && die "==> Not allowed."
 fi
-[[ $DELETESRC == "0" ]] && [[ $UPDATEPKGBUILD == "0" ]] && die "==> Not allowed."
+[[ "$DELETESRC" == "0" ]] && [[ "$UPDATEPKGBUILD" == "0" ]] && die "==> Not allowed."
 
 
 # preproccessing
-[[ $FROMLOG == "0" ]] && [[ $UPDATEPKGBUILD == "1" ]] && [[ $BUILD == "1" ]] && [[ $DELETESRC == "1" ]] && editlog
-[[ $UPDATEPKGBUILD == "0" ]] && updatepkgbuild
-[[ $OWNPKG == "0" ]] && ownpkg
-[[ $EDITPKG == "0" ]] && editpkg
-[[ $DELETESRC == "0" ]] && deletesrc
-[[ $HELP == "0" ]] && help
+[[ "$FROMLOG" == "0" ]] && [[ "$UPDATEPKGBUILD" == "1" ]] && [[ "$BUILD" == "1" ]] && [[ "$DELETESRC" == "1" ]] && editlog
+[[ "$UPDATEPKGBUILD" == "0" ]] && updatepkgbuild
+[[ "$OWNPKG" == "0" ]] && ownpkg
+[[ "$EDITPKG" == "0" ]] && editpkg
+[[ "$DELETESRC" == "0" ]] && deletesrc
+[[ "$HELP" == "0" ]] && help
 
 
 # processing
-[[ $BUILD  == "0" ]] && build
-[[ $CHECK == "0" ]] && check
-[[ $REMOVE == "0" ]] && remove
+[[ "$BUILD"  == "0" ]] && build
+[[ "$CHECK" == "0" ]] && check
+[[ "$REMOVE" == "0" ]] && remove
 
 
 # postprocessing
-[[ $ADD  == "0" ]] && add
-[[ $CLEARCACHE == "0" ]] && clearcache
-[[ $RESTOREDB == "0" ]] && restoredb
-[[ $DIFFREPO == "0" ]] && diffrepo
+[[ "$ADD"  == "0" ]] && add
+[[ "$CLEARCACHE" == "0" ]] && clearcache
+[[ "$RESTOREDB" == "0" ]] && restoredb
+[[ "$DIFFREPO" == "0" ]] && diffrepo
 
 
 
