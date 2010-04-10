@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.54
+#  CKIT - Construction Kit - 0.55
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -110,7 +110,7 @@ ftp_pkg_delete(){
     pkg=$1
     target=$(ftp_run ls '' | awk -v "pkg=$pkg" '$0 ~ pkg {print $9}')
     if [[ -z $target ]]; then echo "  -> $pkg not found"
-		else ftp_run delete $target
+        else ftp_run delete $target
     fi
 }
 
@@ -139,11 +139,19 @@ unlock(){
 }
 
 post_build(){
+    # PKGDEST
+    echo "CICCIO CULO $PKGDEST"
+    
+    [[ $PKGDEST ]] || PKGDEST="$builddir/$1"
+    cd $PKGDEST
     pkg=($1*$PKGEXT)
+    
+    echo "CICCIO CULO $PKGDEST"
+    
     if [[ -s "${pkg[0]}" ]]; then
     
         echo "==> Yo, $1 done :)"
-        mv $builddir/$1/$1*$PKGEXT $repodir
+        mv $PKGDEST/$pkg $repodir
     
         echo $1 >> /tmp/CKIT
         cat /tmp/CKIT $repodir/$buildlog > /tmp/$buildlog
@@ -697,8 +705,12 @@ help(){
 
 # test config file
 [[ ! -s $conf ]] \
-        && die "==> Configuration file not found!" \
+        && die "==> ckit.conf not found!" \
         || source $conf
+
+[[ ! -s "/etc/makepkg.conf" ]] \
+        && die "==> makepkg.conf not found!" \
+        || source "/etc/makepkg.conf"
 
 
 # test workspaces
