@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.56
+#  CKIT - Construction Kit - 0.561
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -450,7 +450,7 @@ build(){
             [[ ! -s "$pkg/PKGBUILD" ]] \
                 && die "  -> PKGBUILD not found."
             # makepkg
-            cd "$pkg" && "$sudo" makepkg "$i" -s "$asroot" "$skipinteg"
+            cd "$pkg" && $sudo makepkg "$i" -s "$asroot" "$skipinteg"
             post_build "$pkg"
         else
             # build?
@@ -495,7 +495,7 @@ build(){
                     && die "  -> PKGBUILD not found."
                 
                 # makepkg
-                cd "$pkg" && "$sudo" makepkg "$i" -s "$asroot" "$skipinteg"
+                cd "$pkg" && $sudo makepkg "$i" -s "$asroot" "$skipinteg"
                 post_build "$pkg"
                 
             fi
