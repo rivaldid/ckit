@@ -11,7 +11,7 @@
 #
 #  Authors:
 #       Dario 'Dax' Vilardi     : bash developer
-#       Corrado 'Bardo'         : bash developer
+#       Corrado 'bardo' Primier : bash developer
 #       Luca 'Nss'              : ruby developer
 #       Giovanni Scafora        : packager
 #
@@ -50,13 +50,13 @@ die(){
 }
 
 get_aur_tarball(){
-    pkg=$1
-    cd $builddir
+    pkg="$1"
+    cd "$builddir"
     url="http://aur.archlinux.org/packages/$pkg/$pkg/PKGBUILD"
     if PKGBUILD=$(wget -q -O - "$url"); then
-        printf "  -> Getting $pkg from AUR... "
+        echo -n "  -> Getting $pkg from AUR... "
         wget "http://aur.archlinux.org/packages/$pkg/$pkg.tar.gz" -o /dev/null
-		if [ $? == 0 ] ; then
+		if [[ $? == 0 ]] ; then
             echo "done"
             tar -xf "$pkg.tar.gz"
             rm "$pkg.tar.gz"
@@ -542,7 +542,7 @@ add(){
     # repo-add
     echo "==> Adding packages queued"
     for file in *"$PKGEXT"; do 
-        printf "  -> $file... "
+        echo -n "  -> $file... "
         repo-add "$repo" "$file" &>/dev/null && \
             echo "done" || \
             echo "fail"
@@ -586,7 +586,7 @@ remove(){
     
     echo "==> Removing from db"
     for pkg in "${pkgs[@]}"; do
-        printf "  -> $pkg... "
+        echo -n "  -> $pkg... "
         repo-remove "$repo" "$pkg" &>/dev/null \
             && echo "done" \
             || echo "failed"
