@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.57
+#  CKIT - Construction Kit - 0.571
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -188,7 +188,7 @@ copy_log_to_pkgs(){
 is_devel(){
     pkg="$1"
     REGEX=".*-(svn|cvs|hg|git|bzr|darcs|dev|devel)"
-    [[ "$pkg" =~ "$REGEX" ]] \
+    [[ "$pkg" =~ $REGEX ]] \
         && return 0 \
         || return 1
 }
@@ -338,19 +338,19 @@ check(){
         else
             localver="Null"
         fi
-        
+
         # devel check
         if [[ "$develcheck" == "0" ]] && is_devel "$pkg" && [[ -d "$builddir/$pkg" ]]; then 
             cd "$builddir/$pkg" || echo "==> $pkg not available."
             # awk -v foo=something  assigns an awk variable
             # $0 being the whole line, $1 being the first field
             develver=$(makepkg -o 2>&1 | awk -v "pkg=$pkg" '$0 ~ pkg {print $6}')
-            cd -
+            cd ~-
             version="$develver"
         else
             version="$aurver"
         fi
-        
+
         # check
         result=$(vercmp "$repover" "$version")
             
@@ -423,11 +423,14 @@ aurdevelsync(){
     ftp_get_repo
     
     while read -r line; do 
+        
         [[ "$line" = */ ]] || continue
         i="${line%/}"
         pkg="${i%-*-*}"
         
-        if is_devel "$pkg"; then 
+        is_devel "$pkg"
+        #echo $?
+        if (( $? == "0" )); then 
             read -p " -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         fi
