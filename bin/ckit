@@ -390,25 +390,25 @@ updatepkgbuild(){
     
     if (( "${#pkgs[@]}" == 0 )); then
     
-		ftp_get_repo
+        ftp_get_repo
         
         IFS=$'\n' read -d '' -a lines < <(tar ztf "$repo")
         
         for line in "${lines[@]}"; do
             [[ "$line" = */ ]] || continue
-			i="${line%/}"
+            i="${line%/}"
             pkg="${i%-*-*}"
             read -p " -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         done
         
-	else
+    else
 
-		for pkg in "${pkgs[@]}"; do
-			get_aur_tarball "$pkg"
-		done
+        for pkg in "${pkgs[@]}"; do
+            get_aur_tarball "$pkg"
+        done
     
-	fi
+    fi
         
 }
 # /UPDATEPKGBUILD
@@ -417,23 +417,23 @@ updatepkgbuild(){
 
 # AURDEVELSYNC
 aurdevelsync(){
-	
-	echo "==> Synchronize devel PKGBUILDs from AUR"
-	
-	ftp_get_repo
-	
-	while read -r line; do 
-		[[ "$line" = */ ]] || continue
+    
+    echo "==> Synchronize devel PKGBUILDs from AUR"
+    
+    ftp_get_repo
+    
+    while read -r line; do 
+        [[ "$line" = */ ]] || continue
         i="${line%/}"
         pkg="${i%-*-*}"
         
         if is_devel "$pkg"; then 
-			read -p " -> $pkg: update? (y/n) " answer
+            read -p " -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
-		fi
+        fi
         
-	done < <(tar ztf "$repo")
-	
+    done < <(tar ztf "$repo")
+    
 }
 # /AURDEVELSYNC
 
