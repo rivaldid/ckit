@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.571
+#  CKIT - Construction Kit - 0.572
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -398,7 +398,7 @@ updatepkgbuild(){
             [[ "$line" = */ ]] || continue
             i="${line%/}"
             pkg="${i%-*-*}"
-            read -p " -> $pkg: update? (y/n) " answer
+            read -p "  -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         done
         
