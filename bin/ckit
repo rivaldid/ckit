@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.572
+#  CKIT - Construction Kit - 0.573
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -634,20 +634,20 @@ diffrepo(){
     cd "$repodir"
     if [[ "$arch" == "i686" ]]; then
         ftp_get_repo
-        mv "$repo" repo1
+        mv "$repo" "repo1"
         arch="x86_64"
         echo "==> Temporarily changing arch to $arch"
         ftp_get_repo
-        mv "$repo repo2"
+        mv "$repo" "repo2"
         arch="i686"
         echo "==> Restoring arch to $arch"
     else
         ftp_get_repo
-        mv "$repo" repo1
+        mv "$repo" "repo1"
         arch="i686"
         echo "==> Temporarily changing arch to $arch"
         ftp_get_repo
-        mv "$repo" repo2
+        mv "$repo" "repo2"
         arch="x86_64"
         echo "==> Restoring arch to $arch"
     fi
