@@ -428,9 +428,7 @@ aurdevelsync(){
         i="${line%/}"
         pkg="${i%-*-*}"
         
-        is_devel "$pkg"
-        #echo $?
-        if (( $? == "0" )); then 
+        if is_devel "$pkg"; then
             read -p " -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         fi
