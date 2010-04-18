@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # 
-#  CKIT - Construction Kit - 0.574
+#  CKIT - Construction Kit - 0.58
 #    An unofficial archlinux repository manager 
 #    over the file transfer protocol.
 #
@@ -45,9 +45,13 @@ conf="/etc/ckit/ckit.conf"
 #################### PRIVATE INTERFACES ####################
 
 die(){ 
-    echo "$@"
+    echo "$@" 
     exit 1
 }
+
+cd(){ 
+    command cd "$@" || die "Yikes!"
+} 
 
 get_aur_tarball(){
     pkg="$1"
@@ -185,12 +189,11 @@ copy_log_to_pkgs(){
         || die "==> $1 empty"
 }
 
-is_devel(){
-    pkg="$1"
-    REGEX=".*-(svn|cvs|hg|git|bzr|darcs|dev|devel)"
-    [[ "$pkg" =~ $REGEX ]] \
-        && return 0 \
-        || return 1
+#is_devel() { [[ $1 = *-@(svn|cvs|hg|git|bzr|darcs|dev|devel) ]]; }
+is_devel() { 
+    case ${1##*-} in svn|cvs|hg|git|bzr|darcs|dev|devel) return 0;; 
+    esac
+    return 1
 }
 
 deletesrc_run(){
@@ -422,18 +425,22 @@ aurdevelsync(){
     
     ftp_get_repo
     
-    while read -r line; do 
+    while read -r -u3 line; do
         
         [[ "$line" = */ ]] || continue
         i="${line%/}"
         pkg="${i%-*-*}"
         
         if is_devel "$pkg"; then
-            read -p " -> $pkg: update? (y/n) " answer
+            read -p "  -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         fi
         
-    done < <(tar ztf "$repo")
+    done 3< <(tar ztf "$repo")
+    
+ # You've got  while read -r line; do ... read -p ...; done < <(...)
+ # Both reads are reading the output of tar ztf
+ # So use a separate fd.  while read -r -u3 line; do ...; done 3< <(tar ztf "$repo")
     
 }
 # /AURDEVELSYNC
