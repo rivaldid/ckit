@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-#  CKIT - Construction Kit - 0.59
+#  CKIT - Construction Kit - 0.591
 #    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
@@ -493,7 +493,7 @@ build(){
             fi
 
             if [[ "$skipinteg" == "1" ]]; then
-                read -p "  -> Do you want skip md5sums check? (y/n) " answer
+                read -p "  -> Do you want skip integrity check? (y/n) " answer
                 [[ "$answer" == "y" ]] && skipinteg=0
             fi
 
