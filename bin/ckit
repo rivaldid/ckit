@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# 
-#  CKIT - Construction Kit - 0.58
-#    An unofficial archlinux repository manager 
+#
+#  CKIT - Construction Kit - 0.59
+#    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
 #  Copyright (C) 2010   Dario 'Dax' Vilardi
@@ -44,14 +44,14 @@ conf="/etc/ckit/ckit.conf"
 
 #################### PRIVATE INTERFACES ####################
 
-die(){ 
-    echo "$@" 
+die(){
+    echo "$@"
     exit 1
 }
 
-cd(){ 
+cd(){
     command cd "$@" || die "Yikes!"
-} 
+}
 
 get_aur_tarball(){
     pkg="$1"
@@ -67,7 +67,7 @@ get_aur_tarball(){
         else
             echo "failed"
         fi
-    else 
+    else
         echo "  -> $pkg not found on AUR."
     fi
 }
@@ -76,13 +76,18 @@ ftp_run(){
     # available commands: ls,put,get,delete,rmdir
     command="$1"
     file="$2"
-    ruby -I "$libdir" "$libdir"/ruFTP.rb -H "$hostname" -u "$user" -p "$pass" -d "$remoteroot/$arch" -c "$command" "$file"
+    ruby -I "$libdir" "$libdir"/ruFTP.rb \
+        -H "$hostname" \
+        -u "$user" \
+        -p "$pass" \
+        -d "$remoteroot/$arch" \
+        -c "$command" "$file"
 }
 
 ftp_get_repo(){
     cd "$repodir"
     [[ -f "$repo" ]] && rm "$repo"
-    
+
     echo "==> Getting db "
     ftp_checkfile "$repo" && ftp_run get "$repo"
 }
@@ -99,14 +104,14 @@ ftp_delete(){
 
 ftp_put_repo(){
     cp "$repo" "$repo"_prev
-    
+
     echo "==> Putting db "
     ftp_put "$repo"
-    
+
     ftp_get_repo
     i=$(stat -c%s "$repo")
     j=$(stat -c%s "$repo"_prev)
-    
+
     [[ $i = $j ]] \
         && echo "  -> Size test ok ($i)"  \
         || echo "  -> Take care: $i ~ $j! restoredb maybe needed"
@@ -149,20 +154,20 @@ post_build(){
     [[ $PKGDEST ]] || PKGDEST="$builddir/$1"
     cd $PKGDEST
     pkg=($1*$PKGEXT)
-    
+
     if [[ -s "${pkg[0]}" ]]; then
-    
+
         echo "==> Yo, $1 done :)"
         mv "$PKGDEST/$pkg" "$repodir"
-    
+
         echo "$1" >> /tmp/CKIT
         cat /tmp/CKIT "$repodir/$buildlog" > "/tmp/$buildlog"
         rm /tmp/CKIT
         mv "/tmp/$buildlog" "$repodir/$buildlog"
-        
+
         # delete sources for stable packages
         if ! is_devel "$1"; then deletesrc_run "$1"; fi
- 
+
     else
         echo "==> WTF, $1 fails at building :("
     fi
@@ -190,8 +195,8 @@ copy_log_to_pkgs(){
 }
 
 #is_devel() { [[ $1 = *-@(svn|cvs|hg|git|bzr|darcs|dev|devel) ]]; }
-is_devel() { 
-    case ${1##*-} in svn|cvs|hg|git|bzr|darcs|dev|devel) return 0;; 
+is_devel() {
+    case ${1##*-} in svn|cvs|hg|git|bzr|darcs|dev|devel) return 0;;
     esac
     return 1
 }
@@ -217,13 +222,13 @@ deletesrc_run(){
 
 # DELETESRC
 deletesrc(){
-    
+
     if [[ "$FROMLOG" == 0 ]] && (( "${#pkgs[@]}" == 0 )); then
         copy_log_to_pkgs "$deletelog"
     else
         (( "${#pkgs[@]}" == 0 )) && die "==> Packages needed!"
     fi
-    
+
     for pkg in "${pkgs[@]}"; do
         deletesrc_run "$pkg"
     done
@@ -238,7 +243,7 @@ editpkg(){
     if [[ -d "$builddir/$pkg" ]]; then
         echo "==> $pkg:"
         cd "$builddir/$pkg"
-        for file in *; do 
+        for file in *; do
             [[ -f "$file" ]] && echo "  -> $file"
         done
         read -p "==> Which one to edit? " file
@@ -250,7 +255,7 @@ editpkg(){
         fi
     else
         echo "==> $pkg not found."
-    fi  
+    fi
 }
 # /EDITPKG
 
@@ -319,22 +324,22 @@ check(){
     echo "==> Checking for outdated packages"
 
 
-    while read -r line; do 
-        
+    while read -r line; do
+
         [[ "$line" = */ ]] || continue
         i="${line%/}"
 
         pkg="${i%-*-*}"
         repover="${i#$pkg-}"
-        
+
         # AUR check
         url="http://aur.archlinux.org/packages/$pkg/$pkg/PKGBUILD"
         if PKGBUILD=$(wget -q -O - "$url"); then
             aurver="$(eval "$PKGBUILD" &>/dev/null; echo "$pkgver-$pkgrel")"
-        else 
+        else
             aurver="Null"
         fi
-        
+
         # local check
         if pacman -Q "$pkg" &> /dev/null; then
             localver="$(LANG=C pacman -Qi "$pkg" | awk '/^Version/ {print $3}')"
@@ -343,8 +348,8 @@ check(){
         fi
 
         # devel check
-        if [[ "$develcheck" == "0" ]] && is_devel "$pkg" && [[ -d "$builddir/$pkg" ]]; then 
-            cd "$builddir/$pkg" || echo "==> $pkg not available."
+        if [[ "$develcheck" == "0" ]] && is_devel "$pkg" && [[ -d "$builddir/$pkg" ]]; then
+            cd "$builddir/$pkg"
             # awk -v foo=something  assigns an awk variable
             # $0 being the whole line, $1 being the first field
             develver=$(makepkg -o 2>&1 | awk -v "pkg=$pkg" '$0 ~ pkg {print $6}')
@@ -356,7 +361,7 @@ check(){
 
         # check
         result=$(vercmp "$repover" "$version")
-            
+
         if (( "$result" < 0 )); then
             if is_devel "$pkg"; then
                 if [[ "$develcheck" == "0" ]]; then
@@ -374,9 +379,9 @@ check(){
                 mv "/tmp/$checklog" "$repodir/$checklog"
             fi
         fi
- 
+
     done < <(tar ztf "$repo")
-    
+
 }
 # /CHECK
 
@@ -384,19 +389,19 @@ check(){
 
 # UPDATEPKGBUILD
 updatepkgbuild(){
-    
+
     echo "==> Updating local PKGBUILD from AUR"
-    
+
     (( "${#pkgs[@]}" == 0 )) \
         && [[ "$FROMLOG" == "0" ]] \
         && copy_log_to_pkgs "$updatelog"
-    
+
     if (( "${#pkgs[@]}" == 0 )); then
-    
+
         ftp_get_repo
-        
+
         IFS=$'\n' read -d '' -a lines < <(tar ztf "$repo")
-        
+
         for line in "${lines[@]}"; do
             [[ "$line" = */ ]] || continue
             i="${line%/}"
@@ -404,15 +409,15 @@ updatepkgbuild(){
             read -p "  -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         done
-        
+
     else
 
         for pkg in "${pkgs[@]}"; do
             get_aur_tarball "$pkg"
         done
-    
+
     fi
-        
+
 }
 # /UPDATEPKGBUILD
 
@@ -420,28 +425,28 @@ updatepkgbuild(){
 
 # AURDEVELSYNC
 aurdevelsync(){
-    
+
     echo "==> Synchronize devel PKGBUILDs from AUR"
-    
+
     ftp_get_repo
-    
+
     while read -r -u3 line; do
-        
+
         [[ "$line" = */ ]] || continue
         i="${line%/}"
         pkg="${i%-*-*}"
-        
+
         if is_devel "$pkg"; then
             read -p "  -> $pkg: update? (y/n) " answer
             [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
         fi
-        
+
     done 3< <(tar ztf "$repo")
-    
+
  # You've got  while read -r line; do ... read -p ...; done < <(...)
  # Both reads are reading the output of tar ztf
  # So use a separate fd.  while read -r -u3 line; do ...; done 3< <(tar ztf "$repo")
-    
+
 }
 # /AURDEVELSYNC
 
@@ -458,92 +463,80 @@ build(){
             die "==> Nothing to build."
         fi
     fi
-    
+
+
+    cd "$builddir"
+
 
     for pkg in "${pkgs[@]}"; do
-        
-        sudo=""
-        asroot=""
-        i=""
-        
+
         echo "==> $pkg"
-        cd "$builddir"
-        
-        
-        if [[ "$noconfirm" == "0" ]]; then
-            # aur
-            [[ "$aur" == "0" ]] && get_aur_tarball "$pkg"
-            # root
-            [[ "$root" == "0" ]] && sudo="sudo" && asroot="--asroot"
-            # install
-            [[ "$install" == "0" ]] && i="-i"
-            # skipmd5sums
-            [[ "$skipmd5sums" == "0" ]] && skipinteg="--skipinteg"
-            # filter
-            [[ ! -s "$pkg/PKGBUILD" ]] \
-                && die "  -> PKGBUILD not found."
-            # makepkg
-            cd "$pkg" && $sudo makepkg "$i" -s "$asroot" "$skipinteg"
-            post_build "$pkg"
-        else
-            # build?
-            read -p "  -> do you want upgrade? (y/n) " answer
-            if [[ "$answer" == "y" ]]; then
-            
-                # aur
-                if [[ "$aur" == "0" ]]; then
-                    get_aur_tarball "$pkg"
-                else
-                    read -p "  -> Do you want get tarball from AUR? (y/n) " answer
-                    [[ "$answer" == "y" ]] && get_aur_tarball "$pkg"
-                fi
-                
-                # root
-                if [[ "$root" == "0" ]]; then
-                    sudo="sudo"
-                    asroot="--asroot"
-                else
-                    read -p "  -> Do you want build as root? (y/n) " answer
-                    [[ "$answer" == "y" ]] && sudo="sudo" && asroot="--asroot"
-                fi
-                
-                # install
-                if [[ "$install" == "0" ]]; then
-                    i="-i"
-                else
-                    read -p "  -> Do you want install package after build? (y/n) " answer
-                    [[ "$answer" == "y" ]] && i="-i"
-                fi
-                
-                # skipmd5sums
-                if [[ "$skipmd5sums" == "0" ]]; then
-                    skipinteg="--skipinteg"
-                else
-                    read -p "  -> Do you want skip md5sums check? (y/n) " answer
-                    [[ "$answer" == "y" ]] && skipinteg="--skipinteg"
-                fi
-                
-                # filter
-                [[ ! -s "$pkg/PKGBUILD" ]] \
-                    && die "  -> PKGBUILD not found."
-                
-                # makepkg
-                cd "$pkg" && $sudo makepkg "$i" -s "$asroot" "$skipinteg"
-                post_build "$pkg"
-                
+
+        makepkg=()
+
+
+        if [[ "$noconfirm" == "1" ]]; then
+
+            if [[ "$aur" == "1" ]]; then
+                read -p "  -> Do you want get tarball from AUR? (y/n) " answer
+                [[ "$answer" == "y" ]] && aur=0
             fi
+
+            if [[ "$root" == "1" ]]; then
+                read -p "  -> Do you want build as root? (y/n) " answer
+                [[ "$answer" == "y" ]] && root=0
+            fi
+
+            if [[ "$install" == "1" ]]; then
+                read -p "  -> Do you want install package after build? (y/n) " answer
+                [[ "$answer" == "y" ]] && install=0
+            fi
+
+            if [[ "$skipinteg" == "1" ]]; then
+                read -p "  -> Do you want skip md5sums check? (y/n) " answer
+                [[ "$answer" == "y" ]] && skipinteg=0
+            fi
+
         fi
-    
+
+
+        [[ "$aur" == "0" ]] && get_aur_tarball "$pkg"
+
+        [[ "$root" == "0" ]] && makepkg+=(sudo)
+
+        makepkg+=(makepkg)
+
+        [[ "$install" == "0" ]] && makepkg+=(-i)
+
+        makepkg+=(-s)
+
+        [[ "$root" == "0" ]] && makepkg+=(--asroot)
+
+        [[ "$skipinteg" == "0" ]] && makepkg+=(--skipinteg)
+
+
+
+        cd "$pkg"
+
+        # execute makepkg
+        [[ -s "PKGBUILD" ]] && "${makepkg[@]}"
+
+        post_build "$pkg"
+
+        cd ~-
+
+
     done
-    
-    
+
+
     # show built packages
+
     copy_log_to_pkgs "$buildlog"
     echo "==> Packages waiting to be added:"
     for pkg in "${pkgs[@]}"; do
         echo "  -> $pkg"
     done
-    
+
 }
 # /BUILD
 
@@ -553,17 +546,17 @@ build(){
 add(){
 
     cd "$repodir"
-    
+
     # init
     [[ ! -s "$repodir/$buildlog" ]] \
         && die "==> Nothing to add, build packages first!"
-        
+
     # lock ftp
     lock
-    
+
     # get db
     ftp_get_repo
-    
+
     # remove old packages
     echo "==> Deleting previous packages"
     copy_log_to_pkgs "$buildlog"
@@ -571,28 +564,28 @@ add(){
         ftp_pkg_delete "$pkg"
     done
     rm "$buildlog" "$checklog"
-    
+
     # repo-add
     echo "==> Adding packages queued"
-    for file in *"$PKGEXT"; do 
+    for file in *"$PKGEXT"; do
         echo -n "  -> $file... "
         repo-add "$repo" "$file" &>/dev/null && \
             echo "done" || \
             echo "fail"
     done
-    
+
     # put db
     ftp_put_repo
-    
+
     # put new packages
     echo "==> Uploading packages"
-    for file in *"$PKGEXT"; do 
+    for file in *"$PKGEXT"; do
         ftp_put "$file" && mv "$file" "$cachedir"
     done
-    
+
     # unlock ftp
     unlock
-    
+
     echo "==> Repository updated! Gj, see ya."
 
 }
@@ -607,16 +600,16 @@ remove(){
     (( "${#pkgs[@]}" == 0 )) && die "==> Packages needed!"
 
     cd "$repodir"
-    
+
     # lock ftp
     lock
-    
+
     ftp_get_repo
     echo "==> Removing from ftp"
     for pkg in "${pkgs[@]}"; do
         ftp_pkg_delete "$pkg"
     done
-    
+
     echo "==> Removing from db"
     for pkg in "${pkgs[@]}"; do
         echo -n "  -> $pkg... "
@@ -624,22 +617,22 @@ remove(){
             && echo "done" \
             || echo "failed"
     done
-        
+
     ftp_put_repo
-    
+
     # unlock ftp
     unlock
-} 
+}
 # /REMOVE
 
 
 
 # DIFFREPO
 diffrepo(){
-    
+
     echo "==> Diff between lists of both repo"
     cd "$repodir"
-    
+
     # the 1st one
     ftp_get_repo
     mv "$repo" "repo1"
@@ -647,7 +640,7 @@ diffrepo(){
         && arch="x86_64" \
         || arch="i686"
     echo "==> Swtching arch to $arch"
-    
+
     # the 2nd one
     ftp_get_repo
     mv "$repo" "repo2"
@@ -655,11 +648,11 @@ diffrepo(){
         && arch="x86_64" \
         || arch="i686"
     echo "==> Restoring arch to $arch"
-    
-    [[ -f list1 ]] && rm -f list1 
+
+    [[ -f list1 ]] && rm -f list1
     [[ -f list2 ]] && rm -f list2
     touch list1 list2
-    
+
     while read -r line; do
         [[ "$line" = */ ]] || continue
         i="${line%/}"
@@ -670,7 +663,7 @@ diffrepo(){
         rm foo
         mv bar list1
     done < <(tar ztf repo1)
-    
+
     while read -r line; do
         [[ "$line" = */ ]] || continue
         i="${line%/}"
@@ -681,11 +674,11 @@ diffrepo(){
         rm foo
         mv bar list2
     done < <(tar ztf repo2)
-    
+
     rm -f repo1 repo2
-    
+
     "$diff" list1 list2
-        
+
 }
 # /DIFFREPO
 
@@ -702,8 +695,7 @@ help(){
     echo "  -> -E: Edit a file from package"
     echo "  -> -h: This help"
     echo "==> Processing:"
-    echo "  -> -B[b][a][r][i][s][n][L] packages: build packages."
-    echo "  -> -Bb: build all packages, don't need with -n"
+    echo "  -> -B[a][r][i][s][n][L] packages: build packages."
     echo "  -> -Ba: get tarball from AUR"
     echo "  -> -Br: build as root"
     echo "  -> -Bi: install packages after builds"
@@ -733,27 +725,29 @@ help(){
 #################### MAIN ##################################
 
 
-# test config file
+# check own config
 [[ ! -s "$conf" ]] \
         && die "==> ckit.conf not found!" \
         || source "$conf"
 
+# check makepkg config
 [[ ! -s "/etc/makepkg.conf" ]] \
         && die "==> makepkg.conf not found!" \
         || source "/etc/makepkg.conf"
 
 
-# test workspaces
+# check workspaces
 mkdir -p "$builddir" "$repodir" "$cachedir"
 
 
-# test logs
+# check logs
 logs=( "$buildlog" "$checklog" "$updatelog" "$deletelog" )
 for log in "${logs[@]}"; do
     [[ ! -f "$repodir/$log" ]] && touch "$repodir/$log"
 done
 
 
+# check arguments
 test -z "$1" && die "==> RTFM, see ya!"
 
 
@@ -774,15 +768,14 @@ FROMLOG=1
 DIFFREPO=1
 AURDEVELSYNC=1
 # secondary
-buildall=1
 aur=1
 root=1
 install=1
-skipmd5sums=1
+skipinteg=1
 noconfirm=1
 develcheck=1
 
-    
+
 x=1         # Avoids an error if we get no options at all.
 while getopts "ABarisnCdRUHLTOEDXSh" opt; do
     case "$opt" in
@@ -791,7 +784,7 @@ while getopts "ABarisnCdRUHLTOEDXSh" opt; do
         a) aur=0;;
         r) root=0;;
         i) install=0;;
-        s) skipmd5sums=0;;
+        s) skipinteg=0;;
         n) noconfirm=0;;
         C) CHECK=0;;
         d) develcheck=0;;
