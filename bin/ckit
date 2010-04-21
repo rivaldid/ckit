@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-#  CKIT - Construction Kit - 0.591
+#  CKIT - Construction Kit - 0.592
 #    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
@@ -196,8 +196,7 @@ copy_log_to_pkgs(){
 
 #is_devel() { [[ $1 = *-@(svn|cvs|hg|git|bzr|darcs|dev|devel) ]]; }
 is_devel() {
-    case ${1##*-} in svn|cvs|hg|git|bzr|darcs|dev|devel) return 0;;
-    esac
+    case ${1##*-} in svn|cvs|hg|git|bzr|darcs|dev|devel) return 0;; esac
     return 1
 }
 
@@ -332,7 +331,7 @@ check(){
         pkg="${i%-*-*}"
         repover="${i#$pkg-}"
 
-        # AUR check
+        # AUR version
         url="http://aur.archlinux.org/packages/$pkg/$pkg/PKGBUILD"
         if PKGBUILD=$(wget -q -O - "$url"); then
             aurver="$(eval "$PKGBUILD" &>/dev/null; echo "$pkgver-$pkgrel")"
@@ -340,14 +339,14 @@ check(){
             aurver="Null"
         fi
 
-        # local check
+        # local version
         if pacman -Q "$pkg" &> /dev/null; then
             localver="$(LANG=C pacman -Qi "$pkg" | awk '/^Version/ {print $3}')"
         else
             localver="Null"
         fi
 
-        # devel check
+        # devel version
         if [[ "$develcheck" == "0" ]] && is_devel "$pkg" && [[ -d "$builddir/$pkg" ]]; then
             cd "$builddir/$pkg"
             # awk -v foo=something  assigns an awk variable
@@ -359,25 +358,23 @@ check(){
             version="$aurver"
         fi
 
-        # check
+        # comparing
         result=$(vercmp "$repover" "$version")
 
         if (( "$result" < 0 )); then
-            if is_devel "$pkg"; then
-                if [[ "$develcheck" == "0" ]]; then
-                    echo "  -> $pkg REPO:$repover LOCAL:$localver CURRENTLY:$version"
-                    echo "$pkg" >> /tmp/CKIT
-                    cat /tmp/CKIT "$repodir/$checklog" > "/tmp/$checklog"
-                    rm /tmp/CKIT
-                    mv "/tmp/$checklog" "$repodir/$checklog"
-                fi
-            else
+
+            [[ "$develcheck" == "0" ]] && is_devel "$pkg"
+
+            if [[ "$?" == "0" ]] || ! is_devel "$pkg"; then
+
                 echo "  -> $pkg REPO:$repover LOCAL:$localver CURRENTLY:$version"
                 echo "$pkg" >> /tmp/CKIT
                 cat /tmp/CKIT "$repodir/$checklog" > "/tmp/$checklog"
                 rm /tmp/CKIT
                 mv "/tmp/$checklog" "$repodir/$checklog"
+
             fi
+
         fi
 
     done < <(tar ztf "$repo")
