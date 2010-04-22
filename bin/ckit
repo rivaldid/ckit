@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-#  CKIT - Construction Kit - 0.592
+#  CKIT - Construction Kit - 0.6
 #    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
@@ -112,7 +112,7 @@ ftp_put_repo(){
     i=$(stat -c%s "$repo")
     j=$(stat -c%s "$repo"_prev)
 
-    [[ $i = $j ]] \
+    (( $i == $j )) \
         && echo "  -> Size test ok ($i)"  \
         || echo "  -> Take care: $i ~ $j! restoredb maybe needed"
 }
@@ -159,11 +159,6 @@ post_build(){
 
         echo "==> Yo, $1 done :)"
         mv "$PKGDEST/$pkg" "$repodir"
-
-        echo "$1" >> /tmp/CKIT
-        cat /tmp/CKIT "$repodir/$buildlog" > "/tmp/$buildlog"
-        rm /tmp/CKIT
-        mv "/tmp/$buildlog" "$repodir/$buildlog"
 
         # delete sources for stable packages
         if ! is_devel "$1"; then deletesrc_run "$1"; fi
@@ -462,6 +457,8 @@ build(){
     fi
 
 
+    [[ -f "$repodir/$checklog" ]] && rm "$repodir/$checklog"
+
     cd "$builddir"
 
 
@@ -526,14 +523,6 @@ build(){
     done
 
 
-    # show built packages
-
-    copy_log_to_pkgs "$buildlog"
-    echo "==> Packages waiting to be added:"
-    for pkg in "${pkgs[@]}"; do
-        echo "  -> $pkg"
-    done
-
 }
 # /BUILD
 
@@ -544,43 +533,45 @@ add(){
 
     cd "$repodir"
 
-    # init
-    [[ ! -s "$repodir/$buildlog" ]] \
-        && die "==> Nothing to add, build packages first!"
+    # getting working list
+    pkgs=()
+    for file in *"$PKGEXT"; do
+        pkg="${file%-*-*-*}"
+        pkgs+=($pkg)
+    done
 
-    # lock ftp
+    # filtering
+    (( "${#pkgs[@]}" == 0 )) && die "==> Nothing to add, build packages first!"
+
+    # locking ftp
     lock
 
-    # get db
+    # getting db
     ftp_get_repo
 
-    # remove old packages
-    echo "==> Deleting previous packages"
-    copy_log_to_pkgs "$buildlog"
+    # adding pkgs to db
+    echo "==> Adding queued packages"
+    for pkg in "${pkgs[@]}"; do
+        echo "  -> $pkg"
+        repo-add "$repo" "$pkg" &>/dev/null
+    done
+
+    # uploading db
+    ftp_put_repo
+
+    # deleting previous version
+    echo "==> Deleting previous version"
     for pkg in "${pkgs[@]}"; do
         ftp_pkg_delete "$pkg"
     done
-    rm "$buildlog" "$checklog"
 
-    # repo-add
-    echo "==> Adding packages queued"
-    for file in *"$PKGEXT"; do
-        echo -n "  -> $file... "
-        repo-add "$repo" "$file" &>/dev/null && \
-            echo "done" || \
-            echo "fail"
-    done
-
-    # put db
-    ftp_put_repo
-
-    # put new packages
+    # uploading packages
     echo "==> Uploading packages"
     for file in *"$PKGEXT"; do
         ftp_put "$file" && mv "$file" "$cachedir"
     done
 
-    # unlock ftp
+    # unlocking ftp
     unlock
 
     echo "==> Repository updated! Gj, see ya."
@@ -598,26 +589,29 @@ remove(){
 
     cd "$repodir"
 
-    # lock ftp
+    # locking ftp
     lock
 
+    # getting db
     ftp_get_repo
-    echo "==> Removing from ftp"
+
+    # deleting packages
+    echo "==> Deleting packages"
     for pkg in "${pkgs[@]}"; do
         ftp_pkg_delete "$pkg"
     done
 
+    # removing pkgs from db
     echo "==> Removing from db"
     for pkg in "${pkgs[@]}"; do
-        echo -n "  -> $pkg... "
-        repo-remove "$repo" "$pkg" &>/dev/null \
-            && echo "done" \
-            || echo "failed"
+        echo "  -> $pkg"
+        repo-remove "$repo" "$pkg" &>/dev/null
     done
 
+    # uploading db
     ftp_put_repo
 
-    # unlock ftp
+    # unlocking ftp
     unlock
 }
 # /REMOVE
@@ -738,7 +732,7 @@ mkdir -p "$builddir" "$repodir" "$cachedir"
 
 
 # check logs
-logs=( "$buildlog" "$checklog" "$updatelog" "$deletelog" )
+logs=( "$checklog" "$updatelog" "$deletelog" )
 for log in "${logs[@]}"; do
     [[ ! -f "$repodir/$log" ]] && touch "$repodir/$log"
 done
