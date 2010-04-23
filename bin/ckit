@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-#  CKIT - Construction Kit - 0.6
+#  CKIT - Construction Kit - 0.61
 #    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
@@ -150,36 +150,23 @@ unlock(){
 }
 
 post_build(){
+    pkg="$1"
     # PKGDEST
-    [[ $PKGDEST ]] || PKGDEST="$builddir/$1"
+    [[ $PKGDEST ]] || PKGDEST="$builddir/$pkg"
     cd $PKGDEST
-    pkg=($1*$PKGEXT)
+    file=($pkg*$PKGEXT)
 
-    if [[ -s "${pkg[0]}" ]]; then
+    if [[ -s "${file[0]}" ]]; then
 
-        echo "==> Yo, $1 done :)"
-        mv "$PKGDEST/$pkg" "$repodir"
+        echo "==> Yo, $pkg done :)"
+        mv "$PKGDEST/$file" "$repodir"
 
         # delete sources for stable packages
-        if ! is_devel "$1"; then deletesrc_run "$1"; fi
+        is_devel "$pkg" || deletesrc_run "$pkg"
 
     else
-        echo "==> WTF, $1 fails at building :("
+        echo "==> WTF, $pkg fails at building :("
     fi
-}
-
-
-rmdirsrc(){
-    [[ -d "$builddir/$1/src" ]] \
-        && rm -rf "$builddir/$1/src" \
-        && echo "  -> $builddir/$1/src removed"
-}
-
-rmsrc(){
-    target=( "zip" "ZIP" "rar" "RAR" "bz2" "gz" "part" "jar" "Jar" "deb" "html" "bin" "run" "rpm" "tgz" "pk3" )
-    for i in "${target[@]}"; do
-        rm "$builddir/$1/*$i" &>/dev/null && echo "  -> $i removed"
-    done
 }
 
 copy_log_to_pkgs(){
@@ -197,10 +184,20 @@ is_devel() {
 
 deletesrc_run(){
     pkg="$1"
-    [[ -d $builddir/$pkg ]] \
-        && echo "==> Cleaning $pkg directory" \
-        && rmdirsrc "$pkg" \
-        && rmsrc "$pkg"
+
+    cd "$builddir/$pkg"
+    targets=( "zip" "ZIP" "rar" "RAR" "bz2" "gz" "part" "jar" "Jar" "deb" "html" "bin" "run" "rpm" "tgz" "pk3" )
+    echo "==> Cleaning $pkg directory"
+
+    found=1
+
+    for target in "${targets[@]}"; do
+        rm *"$target" &>/dev/null && echo "  -> $target deleted" && found=0
+    done
+
+    [[ "$found" == "1" ]] && echo "  -> No targets detected"
+
+    cd ~-
 }
 
 
@@ -502,12 +499,13 @@ build(){
 
         [[ "$install" == "0" ]] && makepkg+=(-i)
 
-        makepkg+=(-s)
+        makepkg+=(-fs)
 
         [[ "$root" == "0" ]] && makepkg+=(--asroot)
 
         [[ "$skipinteg" == "0" ]] && makepkg+=(--skipinteg)
 
+        is_devel "$pkg" || makepkg+=(-c)
 
 
         cd "$pkg"
