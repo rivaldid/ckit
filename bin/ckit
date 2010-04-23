@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-#  CKIT - Construction Kit - 0.61
+#  CKIT - Construction Kit - 0.62
 #    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
@@ -549,9 +549,9 @@ add(){
 
     # adding pkgs to db
     echo "==> Adding queued packages"
-    for pkg in "${pkgs[@]}"; do
-        echo "  -> $pkg"
-        repo-add "$repo" "$pkg" &>/dev/null
+    for file in *"$PKGEXT"; do
+        echo "  -> ${file%-*-*-*}"
+        repo-add --quiet "$repo" "$file"
     done
 
     # uploading db
@@ -603,7 +603,7 @@ remove(){
     echo "==> Removing from db"
     for pkg in "${pkgs[@]}"; do
         echo "  -> $pkg"
-        repo-remove "$repo" "$pkg" &>/dev/null
+        repo-remove --quiet "$repo" "$pkg"
     done
 
     # uploading db
