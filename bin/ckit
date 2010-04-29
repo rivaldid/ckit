@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-#  CKIT - Construction Kit - 0.62
+#  CKIT - Construction Kit - 0.621
 #    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
@@ -463,6 +463,8 @@ build(){
 
         echo "==> $pkg"
 
+        #dependences "$pkg"
+
         makepkg=()
 
 
@@ -535,7 +537,7 @@ add(){
     pkgs=()
     for file in *"$PKGEXT"; do
         pkg="${file%-*-*-*}"
-        pkgs+=($pkg)
+        [[ $pkg == *"$PKGEXT" ]] || pkgs+=($pkg)
     done
 
     # filtering
