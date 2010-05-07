@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-#  CKIT - Construction Kit - 0.62.1
+#  CKIT - Construction Kit - 0.62.2
 #    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
@@ -187,10 +187,18 @@ deletesrc_run(){
 
     cd "$builddir/$pkg"
     targets=( "zip" "ZIP" "rar" "RAR" "bz2" "gz" "part" "jar" "Jar" "deb" "html" "bin" "run" "rpm" "tgz" "pk3" )
+
     echo "==> Cleaning $pkg directory"
 
     found=1
 
+    # src directory
+    [[ -d "src" ]] && rm -rf src && echo "  -> src deleted" && found=0
+
+    # pkg directory
+    [[ -d "pkg" ]] && rm -rf pkg && echo "  -> pkg deleted" && found=0
+
+    # source files
     for target in "${targets[@]}"; do
         rm *"$target" &>/dev/null && echo "  -> $target deleted" && found=0
     done
