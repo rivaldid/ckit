@@ -1,4 +1,35 @@
-ruby -v | awk '{split($2, a, "p"); print a[1]}'
-or
-ruby -v | tr [A-z] - | awk '{split($2, a, "-"); print a[1]}'
+#!/bin/bash
+#Recursive dependences building from AUR.
+
+#dependences(){
+	
+	deps=()
+	
+	#cd "$builddir/$1"
+	
+	source PKGBUILD
+	
+	# depends
+	for pkg in "${depends[@]}"; do 
+		echo $pkg
+		pacman -Si "$pkg" &>/dev/null
+		if (( "$?" == 1 )); then
+			echo "aggiungo dipendenza mancata"
+			deps+=($pkg)
+		fi
+	done
+	
+	# makedepends
+	for pkg in "${makedepends[@]}"; do 
+		echo $pkg
+	done
+	
+	# optdepends
+	for pkg in "${optdepends[@]}"; do 
+		echo $pkg
+	done
+	
+	#cd ~-
+	
+#}
 
