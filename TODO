@@ -1,35 +1,40 @@
 #!/bin/bash
 #Recursive dependences building from AUR.
+# input: package
+# output: packages list
+# After this, recursive calling ckit -Bain $list ?
+# Is this a good solution for this job? ....working on it
+# BAAAAARDO HELP ME :°D
 
 #dependences(){
-	
-	deps=()
-	
-	#cd "$builddir/$1"
-	
-	source PKGBUILD
-	
-	# depends
-	for pkg in "${depends[@]}"; do 
-		echo $pkg
-		pacman -Si "$pkg" &>/dev/null
-		if (( "$?" == 1 )); then
-			echo "aggiungo dipendenza mancata"
-			deps+=($pkg)
-		fi
-	done
-	
-	# makedepends
-	for pkg in "${makedepends[@]}"; do 
-		echo $pkg
-	done
-	
-	# optdepends
-	for pkg in "${optdepends[@]}"; do 
-		echo $pkg
-	done
-	
-	#cd ~-
-	
+
+    deps=()
+
+    #cd "$builddir/$1"
+
+    source PKGBUILD
+
+    # depends
+    for pkg in "${depends[@]}"; do
+        echo $pkg
+        pacman -Si "$pkg" &>/dev/null
+        if (( "$?" == 1 )); then
+            echo "aggiungo dipendenza mancata"
+            deps+=($pkg)
+        fi
+    done
+
+    # makedepends
+    for pkg in "${makedepends[@]}"; do
+        echo $pkg
+    done
+
+    # optdepends
+    for pkg in "${optdepends[@]}"; do
+        echo $pkg
+    done
+
+    #cd ~-
+
 #}
 
