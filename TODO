@@ -6,35 +6,32 @@
 # Is this a good solution for this job? ....working on it
 # BAAAAARDO HELP ME :°D
 
+builddir="$HOME/pkg/workspace"
+
 #dependences(){
 
     deps=()
 
-    #cd "$builddir/$1"
-
-    source PKGBUILD
+    source "$builddir/$1/PKGBUILD"
 
     # depends
     for pkg in "${depends[@]}"; do
-        echo $pkg
         pacman -Si "$pkg" &>/dev/null
-        if (( "$?" == 1 )); then
-            echo "aggiungo dipendenza mancata"
-            deps+=($pkg)
-        fi
+        (( "$?" == 1 )) && deps+=($pkg)
     done
 
     # makedepends
     for pkg in "${makedepends[@]}"; do
-        echo $pkg
+        pacman -Si "$pkg" &>/dev/null
+        (( "$?" == 1 )) && deps+=($pkg)
     done
 
-    # optdepends
-    for pkg in "${optdepends[@]}"; do
-        echo $pkg
-    done
-
-    #cd ~-
+    if (( "${#deps[@]}" > 0 )); then
+        echo "Missing depends:"
+        for dep in "${deps[@]}"; do
+            echo "$dep"
+        done
+    fi
 
 #}
 
