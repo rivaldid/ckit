@@ -25,11 +25,14 @@ builddir="$HOME/pkg/workspace"
         pacman -Si "$pkg" &>/dev/null
         (( "$?" == 1 )) && deps+=($pkg)
     done
-
+    
+    # find and split foo>=pkgver
+    # case foo>=pkgver_found echo $foo $pkgver
     if (( "${#deps[@]}" > 0 )); then
         echo "Missing depends:"
         for dep in "${deps[@]}"; do
             echo "$dep"
+            case ${dep#} in ">="|">"|"=") echo "ok";; esac
         done
     fi
 
