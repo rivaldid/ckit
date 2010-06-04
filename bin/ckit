@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #
-#  CKIT - Construction Kit - 0.62.2
+#  CKIT - Construction Kit - 0.62.3
 #    An unofficial archlinux repository manager
 #    over the file transfer protocol.
 #
@@ -564,9 +564,6 @@ add(){
         repo-add --quiet "$repo" "$file"
     done
 
-    # uploading db
-    ftp_put_repo
-
     # deleting previous version
     echo "==> Deleting previous version"
     for pkg in "${pkgs[@]}"; do
@@ -578,6 +575,9 @@ add(){
     for file in *"$PKGEXT"; do
         ftp_put "$file" && mv "$file" "$cachedir"
     done
+
+    # uploading db
+    ftp_put_repo
 
     # unlocking ftp
     unlock
